@@ -41,10 +41,12 @@ pnpm -r build
 pnpm -r test
 ```
 
-Run the toy benchmark (checked-in miniature data, no credentials needed):
+Run the toy benchmark end-to-end (synthetic miniature data — no credentials, no network):
 
 ```bash
-uv run understory-bench benchmarks/toy/config.yaml
+make toy-bench
+# generates the toy coherence stack, runs the v0 detector against it,
+# scores against the fixture labels, and asserts the expected report
 ```
 
 Running a real benchmark requires NASA Earthdata credentials for ASF data access — see [`docs/DATA_ACCESS.md`](docs/DATA_ACCESS.md).

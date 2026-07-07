@@ -8,11 +8,11 @@
         "type": "Polygon",
         "coordinates": [
           [
-            [-55.001, -7.0],
-            [-54.999, -7.0],
-            [-54.999, -7.002],
-            [-55.001, -7.002],
-            [-55.001, -7.0]
+            [-55.01, -6.995],
+            [-54.99, -6.995],
+            [-54.99, -7.005],
+            [-55.01, -7.005],
+            [-55.01, -6.995]
           ]
         ]
       },
@@ -24,8 +24,8 @@
         "status": "confirmed",
         "biome": "toy",
         "evidence_source": "synthetic fixture — generated, not observed",
-        "area_ha": 1.5,
-        "notes": "Linear feature injected into the toy coherence stack."
+        "area_ha": 24.0,
+        "notes": "~2 km diagonal linear feature injected into the toy coherence stack; polygon is its bounding corridor."
       }
     },
     {

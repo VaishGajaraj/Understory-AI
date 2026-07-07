@@ -38,4 +38,6 @@ ts-test:
 
 # --- Project ---
 toy-bench:
+	uv run python scripts/make_toy_stack.py
 	uv run understory-bench benchmarks/toy/config.yaml
+	uv run python scripts/assert_toy_report.py benchmarks/toy/reports/toy.json

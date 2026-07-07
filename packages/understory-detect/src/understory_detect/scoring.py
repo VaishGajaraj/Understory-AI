@@ -90,6 +90,11 @@ def score(
     precision = tp / (tp + fp) if (tp + fp) else 0.0
     recall = tp / (tp + fn) if (tp + fn) else 0.0
     f1 = 2 * precision * recall / (precision + recall) if (precision + recall) else 0.0
+
+    # Latency: first anomalous pair midpoint minus event window start. Negative
+    # values are possible when the window is conservative and are reported as-is.
+    latencies = sorted((det.first_seen.date() - ev.date_window.start).days for det, ev in matches)
+    median_latency = float(latencies[len(latencies) // 2]) if latencies else None
     return BenchmarkReport(
         benchmark=benchmark,
         detector=detector,
@@ -105,6 +110,7 @@ def score(
         event_precision=precision,
         event_recall=recall,
         f1=f1,
+        median_detection_latency_days=median_latency,
     )
 
 

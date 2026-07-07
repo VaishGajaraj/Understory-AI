@@ -8,6 +8,7 @@ The science layer: separating human-caused ground disturbance from natural decor
 - `baseline` — v0 expected-coherence model: rolling robust mean/variance per pixel per season, conditioned on land cover and recent precipitation.
 - `filters` — the three v0 false-alarm cuts, in order of cheapness: persistence across passes, spatial clustering, geometry (linearity/elongation favoring road- and trail-shaped features).
 - `events` — grouping surviving anomaly pixels into discrete detection events (polygons with date windows and scores).
+- `detectors` — built-in detectors and the name registry the CLI resolves against. `v0-filters` is the legible reference method.
 - `scoring` — the benchmark harness: event-level precision/recall/F1 with explicit spatial/temporal matching tolerances, detection latency, lead over optical alerts, minimum-detectable-size curves. Every run emits a machine-readable report.
 - `cli` — `understory-bench <config.yaml>` runs a full benchmark end-to-end.
 

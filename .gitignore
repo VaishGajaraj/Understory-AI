@@ -17,15 +17,17 @@ node_modules/
 *.tsbuildinfo
 apps/*/dist/
 
-# Data — never commit real granules or scratch rasters
+# Data — never commit real granules or scratch rasters.
+# The toy stack is deterministic and regenerated (scripts/make_toy_stack.py).
 data/scratch/
 *.h5
 *.nc
 *.tif
 *.tiff
 *.zarr/
+benchmarks/*/data/
+benchmarks/*/reports/
 !packages/understory-labels/data/**
-!benchmarks/toy/data/**
 
 # Environment / secrets
 .env

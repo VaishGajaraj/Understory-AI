@@ -14,6 +14,15 @@ from pathlib import Path
 
 import yaml
 from pydantic import BaseModel
+from understory_core.aoi import AreaOfInterest
+from understory_core.stack import CoherenceStack
+from understory_labels import __version__ as labels_version
+from understory_labels.events import load_collection
+
+from understory_detect.detectors import build_detector
+from understory_detect.scoring import score
+
+METHODOLOGY_VERSION = "0.1.0"
 
 
 class BenchmarkConfig(BaseModel):
@@ -25,18 +34,47 @@ class BenchmarkConfig(BaseModel):
     end: str  # ISO date
     detector: str = "v0-filters"
     labels: str  # path to a label collection (GeoJSON), relative to the config file
-    stack_store: str = "data/scratch/{name}.zarr"
-    report_out: str = "reports/{name}.json"
+    stack_store: str  # path to the coherence stack (Zarr), relative to the config file
+    report_out: str  # where to write the report JSON, relative to the config file
 
 
 def run_benchmark(config_path: Path) -> dict:
-    """Discover -> stack -> detect -> score -> report."""
+    """Open stack -> detect -> score -> write machine-readable report."""
     with open(config_path) as f:
         config = BenchmarkConfig.model_validate(yaml.safe_load(f))
-    raise NotImplementedError(
-        f"benchmark '{config.name}': wire discovery -> CoherenceStack.build -> "
-        "detector.detect -> scoring.score once ingest lands"
+    base = config_path.parent
+
+    aoi = AreaOfInterest.from_yaml(base / config.aoi)
+    labels = load_collection(base / config.labels)
+
+    store = base / config.stack_store
+    if not store.exists():
+        raise FileNotFoundError(
+            f"coherence stack not found at {store} — for the toy benchmark run "
+            "`uv run python scripts/make_toy_stack.py` first; real benchmarks "
+            "build stacks via understory_core (see docs/DATA_ACCESS.md)"
+        )
+    stack = CoherenceStack.open(store, aoi)
+
+    detector = build_detector(config.detector)
+    detections = detector.detect(stack)
+
+    report = score(
+        detections,
+        labels,
+        benchmark=config.name,
+        detector=detector.name,
+        detector_version=detector.version,
+        labels_version=labels_version,
+        methodology_version=METHODOLOGY_VERSION,
     )
+    report_dict = report.model_dump(mode="json")
+    report_dict["detections"] = [d.model_dump(mode="json") for d in detections]
+
+    out = base / config.report_out
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(report_dict, indent=2) + "\n")
+    return report_dict
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -48,10 +86,18 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         report = run_benchmark(args.config)
-    except NotImplementedError as e:
-        print(f"not yet implemented: {e}", file=sys.stderr)
+    except FileNotFoundError as e:
+        print(str(e), file=sys.stderr)
         return 2
-    print(json.dumps(report, indent=2))
+
+    summary = {k: v for k, v in report.items() if k != "detections"}
+    print(json.dumps(summary, indent=2))
+    print(
+        f"\n{report['benchmark']}: precision {report['event_precision']:.2f}, "
+        f"recall {report['event_recall']:.2f}, f1 {report['f1']:.2f} "
+        f"({report['n_detections']} detections vs {report['n_events']} confirmed events)",
+        file=sys.stderr,
+    )
     return 0
 
 

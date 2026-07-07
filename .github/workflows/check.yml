@@ -21,9 +21,11 @@ jobs:
       - run: uv run pytest
       - name: Validate label data
         run: uv run understory-labels-validate packages/understory-labels/data/events/*.geojson
-      # The full-pipeline gate: once ingest lands, this runs the toy benchmark
-      # end-to-end on the checked-in miniature stack.
-      # - run: uv run understory-bench benchmarks/toy/config.yaml
+      - name: Full-pipeline gate — toy benchmark end-to-end
+        run: |
+          uv run python scripts/make_toy_stack.py
+          uv run understory-bench benchmarks/toy/config.yaml
+          uv run python scripts/assert_toy_report.py benchmarks/toy/reports/toy.json
 
   typescript:
     runs-on: ubuntu-latest
