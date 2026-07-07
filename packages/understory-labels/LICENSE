@@ -1,0 +1,10 @@
+The data files under data/ are licensed under the Creative Commons
+Attribution 4.0 International License (CC-BY 4.0).
+
+You should attribute the Understory label library and the original
+evidence sources named in each record's evidence_source field.
+
+Full license text: https://creativecommons.org/licenses/by/4.0/legalcode
+
+The Python code in this package (src/) is licensed under Apache 2.0 —
+see the LICENSE file at the repository root.

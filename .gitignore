@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.import_linter_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# Node / TypeScript
+node_modules/
+*.tsbuildinfo
+apps/*/dist/
+
+# Data — never commit real granules or scratch rasters
+data/scratch/
+*.h5
+*.nc
+*.tif
+*.tiff
+*.zarr/
+!packages/understory-labels/data/**
+!benchmarks/toy/data/**
+
+# Environment / secrets
+.env
+.env.*
+.netrc
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

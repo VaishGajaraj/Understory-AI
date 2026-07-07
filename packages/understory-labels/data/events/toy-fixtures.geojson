@@ -1,0 +1,57 @@
+{
+  "type": "FeatureCollection",
+  "description": "Synthetic fixture events for the toy benchmark and CI. Not real disturbances.",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-55.001, -7.0],
+            [-54.999, -7.0],
+            [-54.999, -7.002],
+            [-55.001, -7.002],
+            [-55.001, -7.0]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "toy-road-001",
+        "schema_version": "0.1.0",
+        "date_window": { "start": "2026-02-01", "end": "2026-02-13" },
+        "event_class": "access-road",
+        "status": "confirmed",
+        "biome": "toy",
+        "evidence_source": "synthetic fixture — generated, not observed",
+        "area_ha": 1.5,
+        "notes": "Linear feature injected into the toy coherence stack."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-55.02, -7.01],
+            [-55.015, -7.01],
+            [-55.015, -7.015],
+            [-55.02, -7.015],
+            [-55.02, -7.01]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "toy-rain-001",
+        "schema_version": "0.1.0",
+        "date_window": { "start": "2026-02-01", "end": "2026-02-13" },
+        "event_class": "other",
+        "status": "rejected",
+        "biome": "toy",
+        "evidence_source": "synthetic fixture — simulated rain decorrelation",
+        "notes": "Diffuse transient anomaly; a correct detector does not fire here."
+      }
+    }
+  ]
+}

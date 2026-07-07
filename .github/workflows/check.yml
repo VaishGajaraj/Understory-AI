@@ -1,0 +1,36 @@
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync
+      - run: uv run ruff format --check .
+      - run: uv run ruff check .
+      - run: uv run lint-imports
+      - run: uv run pyright
+      - run: uv run pytest
+      - name: Validate label data
+        run: uv run understory-labels-validate packages/understory-labels/data/events/*.geojson
+      # The full-pipeline gate: once ingest lands, this runs the toy benchmark
+      # end-to-end on the checked-in miniature stack.
+      # - run: uv run understory-bench benchmarks/toy/config.yaml
+
+  typescript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run typecheck
+      - run: bun test

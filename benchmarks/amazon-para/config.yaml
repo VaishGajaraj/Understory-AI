@@ -1,0 +1,11 @@
+# Amazon (Pará) benchmark — external ground truth from Imazon SAD / IBAMA records.
+# AOI geometry and label collection to be filled in once the event records are
+# transcribed into the label library (see packages/understory-labels).
+name: amazon-para
+aoi: aoi.yaml
+start: "2026-01-01"
+end: "2026-07-01"
+detector: v0-filters
+labels: ../../packages/understory-labels/data/events/amazon-para-imazon.geojson # TODO: transcribe
+stack_store: data/scratch/amazon-para.zarr
+report_out: reports/amazon-para.json

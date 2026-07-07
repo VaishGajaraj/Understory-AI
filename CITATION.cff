@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use Understory or its benchmark results, please cite it as below."
+title: "Understory: an open benchmark for under-canopy ground-disturbance detection with NISAR L-band coherence"
+type: software
+authors:
+  - family-names: Gajaraj
+    given-names: Vaish
+    email: vaish.gajaraj@gmail.com
+version: 0.1.0
+date-released: 2026-07-06
+license: Apache-2.0
+repository-code: "https://github.com/VaishGajaraj/understory"
+keywords:
+  - NISAR
+  - SAR
+  - InSAR
+  - coherence change detection
+  - forest degradation
+  - remote sensing

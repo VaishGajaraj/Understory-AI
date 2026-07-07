@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://understory.earth/schema/disturbance-event/0.1.0",
+  "title": "Understory disturbance event",
+  "description": "One labeled forest disturbance event (or verified false alarm), expressed as the `properties` of a GeoJSON Feature. Schema version 0.1.0.",
+  "type": "object",
+  "required": [
+    "id",
+    "schema_version",
+    "date_window",
+    "event_class",
+    "status",
+    "biome",
+    "evidence_source"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$",
+      "description": "Unique slug, e.g. 'para-np-2026-014'"
+    },
+    "schema_version": { "const": "0.1.0" },
+    "date_window": {
+      "type": "object",
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "type": "string", "format": "date" },
+        "end": { "type": "string", "format": "date" }
+      },
+      "description": "The window in which the disturbance is known to have occurred"
+    },
+    "event_class": {
+      "enum": [
+        "selective-logging",
+        "access-road",
+        "mining",
+        "clearing",
+        "controlled-experiment",
+        "other"
+      ]
+    },
+    "status": {
+      "enum": ["confirmed", "rejected", "candidate"],
+      "description": "See CONTRIBUTING.md for the evidence standard behind 'confirmed' and 'rejected'"
+    },
+    "biome": {
+      "type": "string",
+      "description": "Biome slug, e.g. 'amazon-moist-forest', 'eastern-temperate-woodland'"
+    },
+    "evidence_source": {
+      "type": "string",
+      "description": "Citation or description of the evidence, e.g. 'Imazon SAD 2026-03 bulletin' or 'field visit 2026-04-12'"
+    },
+    "area_ha": { "type": "number", "exclusiveMinimum": 0 },
+    "notes": { "type": "string" },
+    "location_precision": {
+      "enum": ["exact", "coarsened"],
+      "default": "exact",
+      "description": "'coarsened' when the geometry was deliberately degraded to protect a sensitive location"
+    }
+  },
+  "additionalProperties": false
+}

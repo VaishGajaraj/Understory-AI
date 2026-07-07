@@ -1,0 +1,22 @@
+[project]
+name = "understory-labels"
+version = "0.1.0"
+description = "The open labeled disturbance-event library: schema, validation tooling, and versioned data releases"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+dependencies = [
+    "pydantic>=2.6",
+    "shapely>=2.0",
+    "jsonschema>=4.21",
+]
+
+[project.scripts]
+understory-labels-validate = "understory_labels.validate:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/understory_labels"]

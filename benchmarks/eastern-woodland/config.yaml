@@ -1,0 +1,11 @@
+# Eastern-woodland benchmark — instrumented sites, controlled disturbances of
+# known date/size/type. Produces the minimum-detectable-event-size curve that
+# published records cannot. Site selection pending.
+name: eastern-woodland
+aoi: aoi.yaml
+start: "2026-07-01"
+end: "2026-12-31"
+detector: v0-filters
+labels: ../../packages/understory-labels/data/events/eastern-woodland-controlled.geojson # TODO
+stack_store: data/scratch/eastern-woodland.zarr
+report_out: reports/eastern-woodland.json

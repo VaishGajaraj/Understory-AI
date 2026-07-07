@@ -1,0 +1,29 @@
+[project]
+name = "understory-detect"
+version = "0.1.0"
+description = "Seasonal coherence baselines, anomaly detection, persistence/geometry filters, and the benchmark scoring harness"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+dependencies = [
+    "understory-core",
+    "understory-labels",
+    "numpy>=1.26",
+    "xarray>=2024.1",
+    "scipy>=1.12",
+    "scikit-image>=0.22",
+    "geopandas>=1.0",
+    "shapely>=2.0",
+    "pydantic>=2.6",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+understory-bench = "understory_detect.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/understory_detect"]
