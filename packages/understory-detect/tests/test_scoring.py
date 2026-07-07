@@ -67,6 +67,36 @@ def test_rejected_labels_do_not_count_as_events():
     assert report.false_positives == 1
 
 
+def test_lead_over_optical_and_size_curve():
+    ev = DisturbanceEvent(
+        id="e1",
+        geometry={"type": "Point", "coordinates": [-55.0, -7.0]},
+        date_window=DateWindow(start=date(2026, 2, 1), end=date(2026, 2, 13)),
+        event_class="access-road",
+        status="confirmed",
+        biome="amazon-moist-forest",
+        evidence_source="test-fixture",
+        area_ha=1.5,
+        optical_alert_date=date(2026, 3, 1),
+    )
+    missed = DisturbanceEvent(
+        id="e2",
+        geometry={"type": "Point", "coordinates": [-56.0, -8.0]},
+        date_window=DateWindow(start=date(2026, 2, 1), end=date(2026, 2, 13)),
+        event_class="clearing",
+        status="confirmed",
+        biome="amazon-moist-forest",
+        evidence_source="test-fixture",
+        area_ha=30.0,
+    )
+    report = make_report([detection("d1", -55.0, -7.0)], [ev, missed])
+    # detected 2026-02-07; optical alert 2026-03-01 -> 22 days lead
+    assert report.median_lead_over_optical_days == 22.0
+    assert report.n_events_with_optical_record == 1
+    # size curve: the 1.5 ha event was found, the 30 ha event was missed
+    assert report.recall_by_area_ha == {"1-2": 1.0, "20+": 0.0}
+
+
 def test_one_to_one_matching():
     # Two detections near one event: only one true positive.
     report = make_report(

@@ -1,0 +1,16 @@
+name: amazon-para
+description: >
+  BR-163 corridor around Novo Progresso, Pará — a documented selective-logging
+  and illegal-mining frontier with dated event records from Imazon SAD and
+  IBAMA enforcement actions. Chosen so ground truth is external: nobody can
+  accuse the project of curating its own test set.
+biome: amazon-moist-forest
+# Exterior ring is counterclockwise per GeoJSON (RFC 7946).
+geometry:
+  type: Polygon
+  coordinates:
+    - - [-55.9, -7.6]
+      - [-54.8, -7.6]
+      - [-54.8, -6.6]
+      - [-55.9, -6.6]
+      - [-55.9, -7.6]

@@ -42,6 +42,10 @@ class BenchmarkReport(BaseModel):
     f1: float = Field(ge=0.0, le=1.0)
     median_detection_latency_days: float | None = None
     median_lead_over_optical_days: float | None = None
+    n_events_with_optical_record: int = 0
+    # Minimum-detectable-size curve: recall per event-area bin, over confirmed
+    # labels that carry area_ha. Keys like "0-1", "1-2", "2-5", "5-20", "20+".
+    recall_by_area_ha: dict[str, float] = Field(default_factory=dict)
 
 
 def match_detections(
@@ -95,6 +99,16 @@ def score(
     # values are possible when the window is conservative and are reported as-is.
     latencies = sorted((det.first_seen.date() - ev.date_window.start).days for det, ev in matches)
     median_latency = float(latencies[len(latencies) // 2]) if latencies else None
+
+    # Lead over the optical alert record: positive = radar saw it first.
+    with_optical = [e for e in confirmed if e.optical_alert_date is not None]
+    leads = sorted(
+        (ev.optical_alert_date - det.first_seen.date()).days
+        for det, ev in matches
+        if ev.optical_alert_date is not None
+    )
+    median_lead = float(leads[len(leads) // 2]) if leads else None
+
     return BenchmarkReport(
         benchmark=benchmark,
         detector=detector,
@@ -111,7 +125,33 @@ def score(
         event_recall=recall,
         f1=f1,
         median_detection_latency_days=median_latency,
+        median_lead_over_optical_days=median_lead,
+        n_events_with_optical_record=len(with_optical),
+        recall_by_area_ha=_recall_by_area(confirmed, {id(ev) for _, ev in matches}),
     )
+
+
+AREA_BINS_HA: list[tuple[str, float, float]] = [
+    ("0-1", 0.0, 1.0),
+    ("1-2", 1.0, 2.0),
+    ("2-5", 2.0, 5.0),
+    ("5-20", 5.0, 20.0),
+    ("20+", 20.0, float("inf")),
+]
+
+
+def _recall_by_area(confirmed: list[DisturbanceEvent], matched_ids: set[int]) -> dict[str, float]:
+    """Recall per event-area bin — the minimum-detectable-size curve.
+
+    Bins with no labeled events are omitted rather than reported as zero.
+    """
+    curve: dict[str, float] = {}
+    for name, lo, hi in AREA_BINS_HA:
+        in_bin = [e for e in confirmed if e.area_ha is not None and lo <= e.area_ha < hi]
+        if in_bin:
+            hits = sum(1 for e in in_bin if id(e) in matched_ids)
+            curve[name] = hits / len(in_bin)
+    return curve
 
 
 def _temporally_compatible(det: Detection, ev: DisturbanceEvent, window_days: int) -> bool:

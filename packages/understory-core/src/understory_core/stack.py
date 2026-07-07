@@ -13,7 +13,7 @@ from pathlib import Path
 import xarray as xr
 
 from understory_core.aoi import AreaOfInterest
-from understory_core.discovery import InterferometricPair
+from understory_core.discovery import GunwPair
 
 
 class CoherenceStack:
@@ -32,11 +32,16 @@ class CoherenceStack:
     def build(
         cls,
         aoi: AreaOfInterest,
-        pairs: list[InterferometricPair],
+        pairs: list[GunwPair],
         store: Path | str,
     ) -> CoherenceStack:
         """Extract coherence for each pair, clip to the AOI, align on a common
-        grid, and stack along time (indexed by pair midpoint date)."""
+        grid, and stack along time (indexed by pair midpoint date).
+
+        ``pairs`` must come from a single frame group (see
+        ``discovery.group_by_frame``) — mixing geometries corrupts the
+        per-pixel time series.
+        """
         raise NotImplementedError(
             "v0: extract_coherence per pair (dask-parallel per tile), "
             "reproject-match to a common grid, concat along time, write Zarr"

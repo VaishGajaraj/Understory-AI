@@ -52,6 +52,11 @@
       "description": "Citation or description of the evidence, e.g. 'Imazon SAD 2026-03 bulletin' or 'field visit 2026-04-12'"
     },
     "area_ha": { "type": "number", "exclusiveMinimum": 0 },
+    "optical_alert_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the same event first appeared in an optical alert system (GLAD/RADD/DETER), when known — enables the detection-lead-over-optical metric"
+    },
     "notes": { "type": "string" },
     "location_precision": {
       "enum": ["exact", "coarsened"],

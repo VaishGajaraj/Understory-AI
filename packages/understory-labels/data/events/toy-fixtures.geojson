@@ -25,7 +25,8 @@
         "biome": "toy",
         "evidence_source": "synthetic fixture — generated, not observed",
         "area_ha": 24.0,
-        "notes": "~2 km diagonal linear feature injected into the toy coherence stack; polygon is its bounding corridor."
+        "optical_alert_date": "2026-03-20",
+        "notes": "~2 km diagonal linear feature injected into the toy coherence stack; polygon is its bounding corridor. The synthetic optical alert date exercises the lead-over-optical metric."
       }
     },
     {

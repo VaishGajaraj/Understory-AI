@@ -1,11 +1,12 @@
 name: toy
 description: Synthetic 5 km x 5 km test region (coordinates arbitrary)
 biome: toy
+# Exterior ring is counterclockwise per GeoJSON (RFC 7946).
 geometry:
   type: Polygon
   coordinates:
-    - - [-55.025, -6.975]
-      - [-54.975, -6.975]
+    - - [-55.025, -7.025]
       - [-54.975, -7.025]
-      - [-55.025, -7.025]
+      - [-54.975, -6.975]
       - [-55.025, -6.975]
+      - [-55.025, -7.025]

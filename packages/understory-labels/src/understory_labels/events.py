@@ -48,6 +48,10 @@ class DisturbanceEvent(BaseModel):
     biome: str
     evidence_source: str
     area_ha: float | None = Field(default=None, gt=0)
+    optical_alert_date: date | None = Field(
+        default=None,
+        description="First appearance in an optical alert system (GLAD/RADD/DETER), if known",
+    )
     notes: str | None = None
     location_precision: Literal["exact", "coarsened"] = "exact"
 
