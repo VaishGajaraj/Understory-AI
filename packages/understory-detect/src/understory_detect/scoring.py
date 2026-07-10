@@ -25,6 +25,24 @@ class MatchingTolerances(BaseModel):
     temporal_window_days: int = 36  # +/- 3 repeat cycles around the event window
 
 
+class CalibrationBin(BaseModel):
+    mean_score: float
+    confirm_rate: float
+    n: int
+
+
+class CalibrationReport(BaseModel):
+    """Is the detector's confidence honest?
+
+    Of detections emitted at ~0.8 score, ~80% should match confirmed ground
+    truth. An overconfident score is a liability — it costs a partner a wasted
+    field trip. Same discipline as an honest error ellipse, new geometry.
+    """
+
+    bins: dict[str, CalibrationBin] = Field(default_factory=dict)
+    expected_calibration_error: float | None = None
+
+
 class BenchmarkReport(BaseModel):
     benchmark: str
     detector: str
@@ -46,6 +64,7 @@ class BenchmarkReport(BaseModel):
     # Minimum-detectable-size curve: recall per event-area bin, over confirmed
     # labels that carry area_ha. Keys like "0-1", "1-2", "2-5", "5-20", "20+".
     recall_by_area_ha: dict[str, float] = Field(default_factory=dict)
+    calibration: CalibrationReport = Field(default_factory=CalibrationReport)
 
 
 def match_detections(
@@ -128,6 +147,7 @@ def score(
         median_lead_over_optical_days=median_lead,
         n_events_with_optical_record=len(with_optical),
         recall_by_area_ha=_recall_by_area(confirmed, {id(ev) for _, ev in matches}),
+        calibration=_calibration(detections, {id(det) for det, _ in matches}),
     )
 
 
@@ -152,6 +172,41 @@ def _recall_by_area(confirmed: list[DisturbanceEvent], matched_ids: set[int]) ->
             hits = sum(1 for e in in_bin if id(e) in matched_ids)
             curve[name] = hits / len(in_bin)
     return curve
+
+
+SCORE_BINS: list[tuple[str, float, float]] = [
+    ("0.0-0.2", 0.0, 0.2),
+    ("0.2-0.4", 0.2, 0.4),
+    ("0.4-0.6", 0.4, 0.6),
+    ("0.6-0.8", 0.6, 0.8),
+    ("0.8-1.0", 0.8, 1.01),  # inclusive upper edge
+]
+
+
+def _calibration(detections: list[Detection], matched_ids: set[int]) -> CalibrationReport:
+    """Per-score-bin confirm rate and expected calibration error.
+
+    'Confirm' here means matched to a confirmed label — on real benchmarks this
+    is exactly the field-verification rate a partner experiences per score band.
+    Bins with no detections are omitted.
+    """
+    bins: dict[str, CalibrationBin] = {}
+    weighted_gap = 0.0
+    total = len(detections)
+    for name, lo, hi in SCORE_BINS:
+        in_bin = [d for d in detections if lo <= d.score < hi]
+        if not in_bin:
+            continue
+        mean_score = sum(d.score for d in in_bin) / len(in_bin)
+        confirm_rate = sum(1 for d in in_bin if id(d) in matched_ids) / len(in_bin)
+        bins[name] = CalibrationBin(
+            mean_score=round(mean_score, 3),
+            confirm_rate=round(confirm_rate, 3),
+            n=len(in_bin),
+        )
+        weighted_gap += abs(mean_score - confirm_rate) * len(in_bin)
+    ece = round(weighted_gap / total, 3) if total else None
+    return CalibrationReport(bins=bins, expected_calibration_error=ece)
 
 
 def _temporally_compatible(det: Detection, ev: DisturbanceEvent, window_days: int) -> bool:

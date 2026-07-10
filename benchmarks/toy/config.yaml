@@ -10,3 +10,4 @@ detector: v0-filters
 labels: ../../packages/understory-labels/data/events/toy-fixtures.geojson
 stack_store: data/toy-stack.zarr # generated: uv run python scripts/make_toy_stack.py
 report_out: reports/toy.json
+synthetic: true # kill-criteria passes on this benchmark are scaffolding, not claims

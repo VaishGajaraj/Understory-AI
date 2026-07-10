@@ -28,11 +28,17 @@ All thresholds live in benchmark config files, never in code.
 
 ## 5. Success and kill criteria (stated before building)
 
-- Precision ≥ ~70% against external ground truth at operationally useful recall.
-- Events ≤ ~2 ha detectable.
-- Median detection lead over optical alerts in cloudy-season tropics ≥ 3 weeks.
+- Precision ≥ 70% against external ground truth at operationally useful recall.
+- Events ≤ 2 ha detectable.
+- Median detection lead over optical alerts in cloudy-season tropics ≥ 21 days.
 
-If the numbers land short, the failure analysis is published anyway.
+These thresholds live in code (`understory_detect.kill_criteria`), are evaluated on every benchmark run, and the go/no-go verdict is embedded in every report — PASS, FAIL, or INSUFFICIENT_DATA per criterion. Verdicts on synthetic benchmarks are explicitly marked as scaffolding, never claims. If the numbers land short on real data, the failure analysis is published anyway.
+
+## 5b. Confidence calibration
+
+Every report includes a calibration table: detections binned by score, with the confirmed-match rate per bin and the expected calibration error. The standard the detector is held to: of detections emitted at ~0.8 score, ~80% should confirm. An overconfident score costs a partner a wasted field trip and is treated as a defect of the same severity as a missed detection.
+
+Known v0 synthetic bound: with default thresholds (12-pixel cluster minimum), the smallest planted event detected in synthetic sweeps is ~3.7 ha (`scripts/size_sweep.py`) — above the 2 ha criterion. The cluster minimum is the binding constraint and is the first tuning target when real controlled-disturbance data arrives. Synthetic pixels are ~55 m; real GUNW posting is finer, so the synthetic bound is conservative.
 
 ## 6. Known caveats
 

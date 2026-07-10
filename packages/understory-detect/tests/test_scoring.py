@@ -97,6 +97,20 @@ def test_lead_over_optical_and_size_curve():
     assert report.recall_by_area_ha == {"1-2": 1.0, "20+": 0.0}
 
 
+def test_calibration_measures_overconfidence():
+    # Two high-score detections: one confirms, one is a false alarm.
+    # Confirm rate in the 0.8-1.0 bin should be 0.5 against mean score 0.9.
+    report = make_report(
+        [detection("d1", -55.0, -7.0, 0.9), detection("d2", -50.0, -3.0, 0.9)],
+        [event("e1", -55.0, -7.0)],
+    )
+    bin_ = report.calibration.bins["0.8-1.0"]
+    assert bin_.n == 2
+    assert bin_.confirm_rate == 0.5
+    ece = report.calibration.expected_calibration_error
+    assert ece is not None and abs(ece - 0.4) < 0.01  # |0.9 - 0.5|
+
+
 def test_one_to_one_matching():
     # Two detections near one event: only one true positive.
     report = make_report(
