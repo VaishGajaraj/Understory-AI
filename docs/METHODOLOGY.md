@@ -22,7 +22,10 @@ All thresholds live in benchmark config files, never in code.
 ## 4. Scoring
 
 - **Event-level matching**: greedy one-to-one, detections in descending score order, matched to confirmed labels by centroid distance ≤ 500 m within a temporal window of ± 36 days around the label's date window. Spatial IoU is reported but not required in v0.
-- **Metrics**: event precision, recall, F1; median detection latency (first anomalous pair midpoint minus event window start); median lead over the optical alert record (GLAD/RADD/DETER dates for the same events, where available); minimum-detectable-size curve (recall binned by event area).
+- **Metrics**: event precision, recall, F1; median detection latency (first anomalous pair midpoint minus event window start); median lead over the optical alert record; minimum-detectable-size curve (recall binned by event area).
+- **The lead baseline is the *earliest* alert from any operational system, not GLAD alone.** Global Forest Watch has fused GLAD-L, GLAD-S2, RADD and (since January 2026) DIST-ALERT into a single integrated product, and reports that the integration detects roughly 9 days earlier than any single contributing system. Scoring lead against one stream would therefore flatter Understory by about that margin, and a fifth alert stream that only beats the weakest of four is not worth contributing. Where a label carries alert dates from more than one system, the earliest is the comparator; where only one is available, the report says which, because a lead measured against GLAD-L alone is not the same claim as a lead measured against the integrated product.
+
+  **The label schema cannot yet express this.** `optical_alert_date` is a single date with no system attribution (schema 0.1.0), so today a contributor can record *an* alert date but not *whose*, and the harness cannot tell a GLAD-L date from an integrated-alerts date. Until the schema carries the system — a 0.2.0 change, which also touches `apps/viewer/src/types.ts` — every lead figure must be read as "against whichever system the contributor happened to record". Closing this is a prerequisite for the lead kill criterion to mean what §5 says it means, and it should be closed before any real-data lead number is published.
 - Only `confirmed` labels count as positives. Detections matching `rejected` labels are false positives — verified natural decorrelation is exactly what the detector must not fire on.
 - Every run emits a machine-readable JSON report. Published tables are generated from reports, never hand-assembled.
 
@@ -30,7 +33,7 @@ All thresholds live in benchmark config files, never in code.
 
 - Precision ≥ 70% against external ground truth at operationally useful recall.
 - Events ≤ 2 ha detectable.
-- Median detection lead over optical alerts in cloudy-season tropics ≥ 21 days.
+- Median detection lead over optical alerts in cloudy-season tropics ≥ 21 days, measured against the earliest available operational alert (see §4) rather than any single system.
 
 These thresholds live in code (`understory_detect.kill_criteria`), are evaluated on every benchmark run, and the go/no-go verdict is embedded in every report — PASS, FAIL, or INSUFFICIENT_DATA per criterion. Verdicts on synthetic benchmarks are explicitly marked as scaffolding, never claims. If the numbers land short on real data, the failure analysis is published anyway.
 

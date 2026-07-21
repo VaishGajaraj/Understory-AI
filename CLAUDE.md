@@ -18,6 +18,8 @@ An open benchmark answering one question: **can NISAR L-band coherence detect do
 make fmt / lint / typecheck / test / check   # check = what CI runs
 make py-test                                  # Python only (uv run pytest)
 make toy-bench                                # toy benchmark end-to-end
+make load-test / load-test-full               # capacity; exit status is the ship call
+make measure-memory                           # recalibrate the tiling memory model
 ```
 
 Python is managed by uv (workspace in root `pyproject.toml`); TypeScript by Bun workspaces + Biome. Git hooks: `lefthook install`.
@@ -26,15 +28,18 @@ Python is managed by uv (workspace in root `pyproject.toml`); TypeScript by Bun 
 
 ```
 packages/understory-labels   # dataset + schema (imports nothing internal; data is CC-BY 4.0)
-packages/understory-core     # NISAR plumbing: discovery, ingest, stacks (imports nothing internal)
+packages/understory-core     # NISAR plumbing: discovery, ingest, stacks, tiling (imports nothing internal)
 packages/understory-detect   # baselines, filters, scoring harness, CLI (imports core + labels)
+packages/understory-perf     # load/latency harness (imports core + detect; nothing imports it)
 benchmarks/*                 # config-only: one AOI + window + detector + labels each
-apps/viewer                  # thin TS stub; grows only when a real user exists
+apps/viewer                  # TS viewer over real pipeline output (report JSON + alerts GeoJSON)
 ```
 
 The dependency direction is enforced by import-linter (`[tool.importlinter]` in `pyproject.toml`) — a violation is a lint failure, not a review comment.
 
 Key data structure: `CoherenceStack` (`understory_core/stack.py`) — a Zarr-backed xarray Dataset, dims `(time, y, x)`, of 12-day repeat-pass coherence. Detectors implement the `Detector` protocol (`understory_detect/interface.py`) and are scored by `understory_detect/scoring.py`.
+
+Memory is a first-class constraint, not an afterthought: a year of 20 m coherence over one NISAR frame is ~19 GB. The rolling baseline is evaluated in spatial tiles (`understory_core/tiling.py`) so peak memory follows `BaselineConfig.max_working_bytes` rather than AOI size. Tiling is exact — the baseline is per-pixel along time — and `test_baseline_tiling.py` asserts tiled and untiled results are bit-identical. `BASELINE_MEMORY_FACTOR` is calibrated by measurement, not derived; re-run `make measure-memory` after touching `baseline.py`.
 
 ## Conventions
 

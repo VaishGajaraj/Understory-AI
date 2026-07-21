@@ -19,9 +19,13 @@ This is a monorepo. Python packages carry the science and pipeline (the MVP); Ty
 | [`packages/understory-core`](packages/understory-core) | Python | Data plumbing: NISAR granule discovery/retrieval (ASF), coherence stack construction, tiling, caching. Application-agnostic. |
 | [`packages/understory-detect`](packages/understory-detect) | Python | The science: seasonal coherence baselines, anomaly detection, persistence/geometry filters, and the scoring harness. Detectors are pluggable. |
 | [`packages/understory-labels`](packages/understory-labels) | Data + Python | The labeled disturbance-event library: versioned schema, contribution path, validation tooling. CC-BY 4.0. |
+| [`packages/understory-perf`](packages/understory-perf) | Python | Load and latency harness: how many AOIs the pipeline can carry before it falls behind NISAR's 12-day cycle, and where it breaks. |
 | [`benchmarks/`](benchmarks) | Config | Benchmark configurations per geography (Amazon/Pará first). Each runs end-to-end from a single command. |
-| [`apps/viewer`](apps/viewer) | TypeScript | Thin web viewer for alerts and benchmark reports. Added early only as scaffolding; grows when a real user exists. |
+| [`apps/viewer`](apps/viewer) | TypeScript | Web viewer for alerts and benchmark reports — triage queue, map, and the kill-criteria table, rendered from real pipeline output. |
 | [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) | — | The versioned methodology document. For a benchmark project, the method is the citable artifact. |
+| [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) | — | Measured capacity: what the pipeline reliably handles, and the scaling path beyond it. |
+| [`docs/APPLICATIONS.md`](docs/APPLICATIONS.md) | — | Survey of adjacent L-band coherence applications against the published record. A survey, not a roadmap. |
+| [`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md) | — | Decision record on hosting, distribution and funding. Currently a considered "not yet", with the reasoning. |
 
 ## Quickstart
 
@@ -33,12 +37,12 @@ uv run pytest                # run all Python tests
 uv run ruff check .          # lint
 ```
 
-TypeScript (requires [pnpm](https://pnpm.io/)):
+TypeScript (requires [Bun](https://bun.sh/) — the workspace is Bun, not pnpm):
 
 ```bash
-pnpm install
-pnpm -r build
-pnpm -r test
+bun install
+bun run lint && bun run typecheck && bun test
+bun run --filter '@understory/viewer' dev   # the viewer, on :5173
 ```
 
 Run the toy benchmark end-to-end (synthetic miniature data — no credentials, no network):
@@ -50,6 +54,15 @@ make toy-bench
 ```
 
 Running a real benchmark requires NASA Earthdata credentials for ASF data access — see [`docs/DATA_ACCESS.md`](docs/DATA_ACCESS.md).
+
+Check capacity (no credentials, no network — stacks are synthesized at real NISAR dimensions):
+
+```bash
+make load-test        # a 12-day cycle's work for 6 AOIs, arriving as a burst
+make load-test-full   # every scenario, including the 20 m one that does not fit
+```
+
+Exit status is the ship / no-ship call. Measured results: [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md).
 
 ## Design principles
 

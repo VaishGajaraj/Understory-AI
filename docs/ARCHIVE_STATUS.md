@@ -1,6 +1,33 @@
 # NISAR archive status — first contact notes
 
-**As of 2026-07-06.** Rerun `scripts/probe_archive.py` over any AOI for the current picture; this file records findings that shaped the code, not a live inventory.
+**As of 2026-07-21.** Rerun `scripts/probe_archive.py` over any AOI for the current picture; this file records findings that shaped the code, not a live inventory.
+
+## The calibration gate opened on 2026-07-20
+
+The PROVISIONAL tier was empty at first contact and is not any more. This is the single most consequential change since these notes were written.
+
+- **2026-02-27** — BETA: >100,000 L1–L3 products, acquisitions 2025-10-17 → 2026-01-20. Explicitly not fully calibrated.
+- **2026-07-20** — PROVISIONAL: global L-band, all acquisitions from 2026-06-17 forward. "Calibrated and partially validated"; generally meets radiometric and geolocation requirements at lower latitudes where ionospheric variability is low.
+- **Q4 2026** — validated reprocessing of the entire science-phase backlog, superseding everything earlier.
+
+So METHODOLOGY.md's re-validation gate is now actionable, and there is a **second gate nobody planned for**: anything published between now and the Q4 reprocessing is still provisional-grade and will be superseded. That reprocessing is also the largest load this project will ever absorb — it is modeled as a scenario in `understory-perf` (`scenarios/reprocess-backlog.yaml`).
+
+Observed granule counts at probe time (CMR): `NISAR_L2_GUNW_PROVISIONAL_V1` 11,165; `NISAR_L2_GUNW_BETA_V1` 10,217. GUNW production is running at roughly 1,100 granules/day at a ~1.9 GB median size.
+
+## Known issues that bite a coherence detector
+
+From ASF's published known-issues list. These are false-alarm sources, not footnotes:
+
+- **BETA has radiometric banding across the swath** from incomplete antenna-pattern removal, described as most apparent over uniform radar cross-section — *tropical forest is the named example.*
+- **RFI produces decorrelation streaks**, worst in cross-pol. A streak is what the v0 linearity filter is built to select for.
+- **Ionospheric artifacts near solar maximum** leave residual decorrelation streaks, particularly in descending tracks and at higher latitudes.
+- **Do not mix BETA and PROVISIONAL in one time series.** Processor differences produce artifacts. `CoherenceStack.build` now refuses a mixed-tier pair list outright, the same way it refuses mixed frame groups.
+
+## Unresolved: the coherence layer's posting
+
+Two documentation passes disagreed on whether GUNW carries coherence magnitude at 20 m as well as 80 m, or whether 80 m is the only geocoded posting (with RIFG at 30 m and GCOV at 20 m). The difference decides whether sub-hectare degradation is visible at all — at 80 m a 1 ha event is one to two pixels.
+
+There is an arithmetic prior, and it favours 80 m: a full frame is ~245 x 264 km, so one 20 m float32 coherence layer would be ~645 MB against a ~1.9 GB median granule. Three such layers would exceed the whole granule. Bet on 80 m — but **settle it with `h5ls` on one real granule rather than with arithmetic or docs.** It is an hour of work and it changes the cost and feasibility of everything downstream by roughly 10x. `understory_core.ingest` walks the product tree instead of hardcoding paths precisely because this keeps moving.
 
 ## What the archive actually looks like
 
