@@ -29,6 +29,11 @@ benchmarks/*/data/
 benchmarks/*/reports/
 !packages/understory-labels/data/**
 
+# Load-harness reports are machine- and moment-specific: regenerate with
+# `make load-test-full`. The numbers worth keeping are transcribed into
+# docs/PERFORMANCE.md alongside the hardware they were measured on.
+reports/
+
 # Environment / secrets
 .env
 .env.*

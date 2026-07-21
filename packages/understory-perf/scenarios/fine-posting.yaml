@@ -1,0 +1,21 @@
+# The same cycle burst against the 20 m coherence layer instead of the 80 m one.
+# 16x the pixels, and the scientifically necessary case: ~80% of tropical
+# disturbance events are 0.2-0.5 ha and are invisible at 80 m posting.
+#
+# Worker count is pinned to 2 rather than one-per-core. That is not tuning, it
+# is the constraint being measured: a 24-pair stack over a 100 km AOI at 20 m is
+# 2.4 GB, and peak working memory is roughly twice that, so a 16 GB node fits
+# two concurrent items and no more. Leaving it at 9 workers would measure the
+# swap subsystem instead of the pipeline.
+#
+# Expect this scenario to fail its utilization SLO. That failure is the
+# documented finding — see docs/PERFORMANCE.md — not a regression.
+name: cycle-burst-fine-2
+shape: cycle-burst
+n_aoi: 2
+stack_depth: 24
+posting: fine # 20 m GUNW coherence layer
+aoi_side_km: 100.0
+workers: 2
+compression: 1.0e-4
+report_out: reports/cycle-burst-fine-2.json

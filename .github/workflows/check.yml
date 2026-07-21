@@ -26,6 +26,16 @@ jobs:
           uv run python scripts/make_toy_stack.py
           uv run understory-bench benchmarks/toy/config.yaml
           uv run python scripts/assert_toy_report.py benchmarks/toy/reports/toy.json
+      # Guards the shape of the capacity story, not its absolute numbers — a
+      # shared runner is not the deployment target. Fails if an SLO regresses,
+      # a task errors, or peak memory stops being proportionate to input.
+      - name: Load gate — SLOs under a burst
+        run: uv run understory-load packages/understory-perf/scenarios/ci-smoke.yaml
+      # The tile sizer's memory model is calibrated by measurement, not derived.
+      # This fails if a change to baseline.py has made the budget an
+      # under-estimate, which would OOM real runs rather than degrade them.
+      - name: Memory model still budgeted conservatively
+        run: uv run python scripts/measure_baseline_memory.py
 
   typescript:
     runs-on: ubuntu-latest
