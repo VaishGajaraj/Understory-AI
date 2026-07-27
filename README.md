@@ -26,6 +26,7 @@ This is a monorepo. Python packages carry the science and pipeline (the MVP); Ty
 | [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) | — | Measured capacity: what the pipeline reliably handles, and the scaling path beyond it. |
 | [`docs/APPLICATIONS.md`](docs/APPLICATIONS.md) | — | Survey of adjacent L-band coherence applications against the published record. A survey, not a roadmap. |
 | [`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md) | — | Decision record on hosting, distribution and funding. Currently a considered "not yet", with the reasoning. |
+| [`docs/STARTUP.md`](docs/STARTUP.md) | — | Research memo on government demand and the dual-use question. Names where it conflicts with GOVERNANCE.md; nothing acted on. |
 
 ## Quickstart
 
