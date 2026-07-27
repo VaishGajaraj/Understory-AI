@@ -121,16 +121,38 @@ def _h5_size_bytes(properties: dict) -> int | None:
 
 
 def _md5sum(properties: dict) -> str | None:
-    """The catalog MD5, if CMR populates one for this granule.
+    """The catalog MD5 for the granule's HDF5, when the record carries one.
 
-    asf_search declares an ``md5sum`` property for all products, but whether CMR
-    actually fills it for NISAR GUNW is unverified against a real granule — so
-    this is best-effort: a truthy string is used, anything else is None, and the
-    download path treats a None checksum honestly (records the bytes' own digest
-    without claiming it was verified against the archive).
+    Settled against the live archive (2026-07-27): CMR **does** publish an MD5
+    per distributed file for NISAR GUNW, in each ``ArchiveAndDistributionInfo``
+    entry's ``Checksum``. asf_search's flat ``md5sum`` property is nonetheless
+    ``None`` for these granules — it is not wired to that field — so reading
+    only ``md5sum`` silently gives up a digest the archive actually publishes,
+    and every download degrades to the honest-but-weaker "fingerprint, not
+    verification" path.
+
+    So both are tried: the flat property first, then the per-file checksum from
+    the UMM record under whichever key asf_search surfaced it. Anything
+    unexpected yields None rather than raising — a missing digest is a weaker
+    guarantee, not an error.
     """
     value = properties.get("md5sum")
-    return value if isinstance(value, str) and value else None
+    if isinstance(value, str) and value:
+        return value
+
+    for key in ("archiveAndDistributionInformation", "ArchiveAndDistributionInformation"):
+        entries = properties.get(key)
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
+            if not isinstance(entry, dict) or not str(entry.get("Name", "")).endswith(".h5"):
+                continue
+            checksum = entry.get("Checksum")
+            if isinstance(checksum, dict) and str(checksum.get("Algorithm", "")).upper() == "MD5":
+                digest = checksum.get("Value")
+                if isinstance(digest, str) and digest:
+                    return digest
+    return None
 
 
 def search_gunw_pairs(

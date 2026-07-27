@@ -77,3 +77,63 @@ def test_group_by_frame_separates_geometries():
     assert set(grouped) == {(10, 5, "ASCENDING"), (10, 6, "ASCENDING")}
     frame_5 = grouped[(10, 5, "ASCENDING")]
     assert [p.reference_start.day for p in frame_5] == [1, 13]  # time-ordered
+
+
+# --- catalog checksum -------------------------------------------------------
+#
+# Settled against the live archive 2026-07-27: CMR publishes a per-file MD5 for
+# NISAR GUNW, but asf_search's flat `md5sum` property is None for these
+# granules. Reading only `md5sum` throws away a digest the archive does publish
+# and silently downgrades every download to the unverified path.
+
+
+def _props(**extra) -> dict:
+    base = {
+        "sceneName": (
+            "NISAR_L2_PR_GUNW_009_155_D_094_010_2000_SH_20260107T231703_20260107T231737_"
+            "20260119T231703_20260119T231738_X05010_N_P_J_001"
+        ),
+        "pathNumber": 155,
+        "frameNumber": 94,
+        "flightDirection": "DESCENDING",
+        "url": "https://example.invalid/g.h5",
+    }
+    base.update(extra)
+    return base
+
+
+def test_md5_read_from_the_per_file_checksum_when_the_flat_property_is_none():
+    pair = pair_from_asf_properties(
+        _props(
+            md5sum=None,
+            archiveAndDistributionInformation=[
+                {"Name": "g_LATLON.png", "Checksum": {"Value": "aaa", "Algorithm": "MD5"}},
+                {"Name": "g.h5", "Checksum": {"Value": "499bb59ac8e2622f", "Algorithm": "MD5"}},
+            ],
+        ),
+        "provisional",
+    )
+    assert pair.md5 == "499bb59ac8e2622f", "must pick the HDF5's digest, not a browse image's"
+
+
+def test_flat_md5sum_property_still_wins_when_present():
+    pair = pair_from_asf_properties(_props(md5sum="flat-digest"), "provisional")
+    assert pair.md5 == "flat-digest"
+
+
+def test_missing_checksum_is_none_not_an_error():
+    assert pair_from_asf_properties(_props(), "beta").md5 is None
+    assert (
+        pair_from_asf_properties(_props(archiveAndDistributionInformation="?"), "beta").md5 is None
+    )
+    assert (
+        pair_from_asf_properties(
+            _props(
+                archiveAndDistributionInformation=[
+                    {"Name": "g.h5", "Checksum": {"Algorithm": "SHA256", "Value": "x"}}
+                ]
+            ),
+            "beta",
+        ).md5
+        is None
+    ), "a non-MD5 algorithm must not be passed off as an MD5"
