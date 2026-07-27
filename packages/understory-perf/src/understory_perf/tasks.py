@@ -49,7 +49,6 @@ class StageTiming:
     service_seconds: float
     peak_rss_bytes: int
     n_detections: int = 0
-    n_tiles: int = 0
     ok: bool = True
     error: str = ""
     extra: dict = field(default_factory=dict)

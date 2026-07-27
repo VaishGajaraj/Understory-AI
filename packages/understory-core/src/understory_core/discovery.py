@@ -46,6 +46,11 @@ class GunwPair:
     url: str  # HTTPS distribution URL
     s3_url: str | None
     calibration_tier: str  # "beta" | "provisional" | "validated"
+    # Catalog-reported size and checksum, when CMR carries them. Both feed the
+    # integrity check in ingest; both are optional because their presence for
+    # NISAR GUNW is not guaranteed (see pair_from_asf_properties).
+    size_bytes: int | None = None
+    md5: str | None = None
 
     @property
     def temporal_baseline_days(self) -> int:
@@ -91,7 +96,41 @@ def pair_from_asf_properties(properties: dict, tier: str) -> GunwPair:
         url=properties.get("url", ""),
         s3_url=s3_urls[0] if s3_urls else None,
         calibration_tier=tier,
+        size_bytes=_h5_size_bytes(properties),
+        md5=_md5sum(properties),
     )
+
+
+def _h5_size_bytes(properties: dict) -> int | None:
+    """Bytes of the granule's HDF5 file from the CMR record, if reported.
+
+    asf_search's NISARProduct exposes ``bytes`` as ``{filename: {'bytes': int,
+    ...}}`` (one entry per distributed file); the generic path leaves it an int.
+    Both are tolerated, and anything unexpected yields None rather than raising —
+    a missing size just means the length check falls back to Content-Length.
+    """
+    raw = properties.get("bytes")
+    if isinstance(raw, int):
+        return raw
+    if isinstance(raw, dict):
+        h5 = [v for name, v in raw.items() if name.endswith(".h5")]
+        entry = (h5 or list(raw.values()))[0] if raw else None
+        if isinstance(entry, dict) and isinstance(entry.get("bytes"), int):
+            return entry["bytes"]
+    return None
+
+
+def _md5sum(properties: dict) -> str | None:
+    """The catalog MD5, if CMR populates one for this granule.
+
+    asf_search declares an ``md5sum`` property for all products, but whether CMR
+    actually fills it for NISAR GUNW is unverified against a real granule — so
+    this is best-effort: a truthy string is used, anything else is None, and the
+    download path treats a None checksum honestly (records the bytes' own digest
+    without claiming it was verified against the archive).
+    """
+    value = properties.get("md5sum")
+    return value if isinstance(value, str) and value else None
 
 
 def search_gunw_pairs(

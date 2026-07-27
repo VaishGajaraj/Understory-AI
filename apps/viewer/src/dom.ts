@@ -22,10 +22,6 @@ export class Raw {
   }
 }
 
-export function raw(value: string): Raw {
-  return new Raw(value)
-}
-
 export function esc(value: string): string {
   return value
     .replace(/&/g, '&amp;')
@@ -35,7 +31,8 @@ export function esc(value: string): string {
     .replace(/'/g, '&#39;')
 }
 
-/** Tagged template: interpolations are escaped unless wrapped in `raw()`. */
+/** Tagged template: interpolations are escaped unless they are already `Raw`
+ *  (e.g. a nested `html\`\``), so pre-built markup passes through untouched. */
 export function html(strings: TemplateStringsArray, ...values: unknown[]): Raw {
   let out = ''
   strings.forEach((chunk, i) => {

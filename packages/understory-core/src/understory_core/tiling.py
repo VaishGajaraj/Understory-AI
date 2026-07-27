@@ -44,7 +44,7 @@ DEFAULT_TILE_BUDGET_BYTES = 512 * 1024 * 1024
 # overhead dominates and throughput collapses. This floor OVERRIDES the memory
 # budget: a deep enough stack cannot be made to fit, and shrinking tiles to 4x4
 # to pretend otherwise would trade a memory problem for a throughput one.
-# tile_side_for_budget logs when this happens; budget_is_achievable predicts it.
+# tile_side_for_budget logs when this happens.
 MIN_TILE_SIDE = 64
 
 
@@ -94,8 +94,7 @@ def tile_side_for_budget(
     even a 64-pixel tile exceed the budget, this returns the floor and logs how
     far over it goes — the budget is a target, not a guarantee, and silently
     honouring it by producing 4x4 tiles would trade a memory problem for a
-    throughput one. ``budget_is_achievable`` reports the same thing without the
-    side effect.
+    throughput one.
     """
     per_pixel = BASELINE_MEMORY_FACTOR * window_pairs * n_time * itemsize
     if per_pixel <= 0:
@@ -117,19 +116,6 @@ def tile_side_for_budget(
         )
         return MIN_TILE_SIDE
     return side
-
-
-def budget_is_achievable(
-    n_time: int,
-    window_pairs: int,
-    budget_bytes: int = DEFAULT_TILE_BUDGET_BYTES,
-    itemsize: int = 4,
-) -> bool:
-    """Whether ``budget_bytes`` is reachable without going below the tile floor."""
-    per_pixel = BASELINE_MEMORY_FACTOR * window_pairs * n_time * itemsize
-    if per_pixel <= 0:
-        raise ValueError("n_time and window_pairs must be positive")
-    return int(math.sqrt(budget_bytes / per_pixel)) >= MIN_TILE_SIDE
 
 
 def tile_grid(n_y: int, n_x: int, tile_side: int) -> list[Tile]:

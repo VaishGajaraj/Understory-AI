@@ -37,7 +37,6 @@ def make_result(
                 "service_seconds": service_seconds,
                 "peak_rss_bytes": peak_rss_bytes,
                 "n_detections": 1,
-                "n_tiles": 1,
                 "ok": ok,
                 "error": "" if ok else "MemoryError: out of memory",
                 "extra": {},

@@ -5,6 +5,12 @@ a tuning knob. They are separated from the workload models so that when the
 archive changes, one file changes. Sources and observation dates are recorded
 in docs/ARCHIVE_STATUS.md; re-derive with ``scripts/probe_archive.py``.
 
+This is a sourced reference table, not only a set of live inputs: some constants
+are consumed by the workload models (``REPEAT_CYCLE_DAYS``, ``COHERENCE_POSTING_M``,
+``FRAME_GROUPS_PER_AOI``, ``pairs_per_year``), and the rest stand as documented
+mission facts so a future feature — or a doc — has one place to read them from,
+and one place to update when the archive shifts.
+
 The load harness exists because these numbers are large. A year of 20 m
 coherence over a single NISAR frame is ~19 GB, and the detector used to need
 ~16x its input in working memory. That combination is what decides whether this
@@ -12,8 +18,6 @@ project can process one AOI or a hundred.
 """
 
 from __future__ import annotations
-
-from dataclasses import dataclass
 
 # --- Orbit and cadence (mission design) ---
 
@@ -49,41 +53,6 @@ REQUIREMENT_PRODUCT_LATENCY_HOURS = 72.0
 # stack: geometry cannot be mixed within a coherence time series.
 FRAME_GROUPS_PER_AOI = 4
 FRAMES_PER_GROUP_PER_AOI = 2
-
-
-@dataclass(frozen=True)
-class FrameGeometry:
-    """Raster dimensions of one GUNW frame's coherence layer at a posting."""
-
-    posting_m: float
-    height_px: int
-    width_px: int
-
-    @property
-    def pixels(self) -> int:
-        return self.height_px * self.width_px
-
-    def stack_bytes(self, n_pairs: int, itemsize: int = 4) -> int:
-        return self.pixels * n_pairs * itemsize
-
-
-def frame_geometry(posting: str = "fine") -> FrameGeometry:
-    """Raster shape of a full NISAR frame at the named coherence posting."""
-    if posting not in COHERENCE_POSTING_M:
-        raise KeyError(f"unknown posting '{posting}' (known: {sorted(COHERENCE_POSTING_M)})")
-    spacing = COHERENCE_POSTING_M[posting]
-    return FrameGeometry(
-        posting_m=spacing,
-        height_px=int(FRAME_ALONG_TRACK_KM * 1000 / spacing),
-        width_px=int(FRAME_CROSS_TRACK_KM * 1000 / spacing),
-    )
-
-
-def aoi_geometry(side_km: float, posting: str = "fine") -> FrameGeometry:
-    """Raster shape of a square AOI of ``side_km`` at the named posting."""
-    spacing = COHERENCE_POSTING_M[posting]
-    side_px = int(side_km * 1000 / spacing)
-    return FrameGeometry(posting_m=spacing, height_px=side_px, width_px=side_px)
 
 
 def pairs_per_year(cycles_per_year: float = 365.25 / REPEAT_CYCLE_DAYS) -> int:
