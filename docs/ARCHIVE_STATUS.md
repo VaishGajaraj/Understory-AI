@@ -1,6 +1,27 @@
 # NISAR archive status — first contact notes
 
-**As of 2026-07-21.** Rerun `scripts/probe_archive.py` over any AOI for the current picture; this file records findings that shaped the code, not a live inventory.
+**As of 2026-07-27.** Rerun `scripts/probe_archive.py` over any AOI for the current picture; this file records findings that shaped the code, not a live inventory.
+
+## Live probe, 2026-07-27: no forest AOI is stackable yet
+
+Queried across six geographies. The PROVISIONAL tier now returns pairs everywhere — but the deepest *single-cycle* series in any frame group is **one pair**, because the forward stream only began at 2026-06-17 acquisitions and adds one pair per frame per 12 days.
+
+| AOI | PROVISIONAL pairs | single-cycle | deepest series |
+|---|---:|---:|---:|
+| amazon-para (benchmark AOI) | 8 | 1 | 1 |
+| amazon-rondonia | 19 | 6 | 1 |
+| congo-drc | 18 | 7 | 1 |
+| borneo-sabah | 16 | 4 | 1 |
+| png | 20 | 7 | 1 |
+| nw-mexico | 16 | 6 | 1 |
+
+The deepest stackable series anywhere is still **BETA track 99, frames 74/75 descending — 7 consecutive 12-day pairs, 2025-10-24 → 2026-01-16, ~16.6 GB**, over NW Mexico. That is why `benchmarks/nw-mexico-t99` exists as an explicitly temporary engineering target for `scripts/run_live.py`: it is the only place the real-data plumbing can be exercised end to end today, and it has no labels, so nothing there is scored.
+
+**Sequencing consequence:** the baseline needs `min_history_pairs` (4 by default) before it scores a pixel at all, so a forest AOI needs roughly **5–6 more 12-day cycles — about two to three months — before the first real benchmark is possible on the calibrated stream.** Poll with the probe script; the moment a Pará frame group reaches ~6 pairs, the real benchmark unblocks.
+
+## Settled: CMR publishes an MD5, asf_search does not surface it
+
+The granule record carries a per-file `Checksum` (`Algorithm: MD5`) for every distributed file, including the `.h5`. But `asf_search`'s flat `md5sum` property reads `None` for these granules — it is not wired to that field. Reading only `md5sum` therefore threw away a digest the archive does publish and silently downgraded every download to the unverified path. `discovery._md5sum` now reads both.
 
 ## The calibration gate opened on 2026-07-20
 
