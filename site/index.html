@@ -79,17 +79,29 @@
     width: 100%;
     height: 100%;
     display: block;
-    opacity: 0.42;
+    opacity: 0.72;
   }
 
+  /* Darkest behind the headline, clearing toward the right so the coherence
+     field is actually legible there. The field is the argument, not wallpaper. */
   .hero::after {
     content: "";
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(120% 85% at 12% 0%, #070b0800 30%, #070b08d9 100%),
-      linear-gradient(180deg, #070b08cc 0%, #070b0866 38%, #070b08f2 100%);
+      radial-gradient(78% 120% at 6% 52%, #070b08f7 0%, #070b08e0 42%, #070b0838 100%),
+      linear-gradient(180deg, #070b08e6 0%, #070b0800 26%, #070b0800 68%, #070b08f2 100%);
     pointer-events: none;
+  }
+
+  @media (max-width: 60rem) {
+    /* Narrow viewports put text over the whole width, so hold the field back. */
+    #field { opacity: 0.4; }
+    .hero::after {
+      background:
+        radial-gradient(120% 90% at 20% 30%, #070b08f2 0%, #070b08d4 55%, #070b08a6 100%),
+        linear-gradient(180deg, #070b08e6 0%, #070b0866 30%, #070b08f2 100%);
+    }
   }
 
   .hero-inner {
@@ -553,15 +565,16 @@ uv run python scripts/probe_archive.py benchmarks/amazon-para/aoi.yaml</pre>
     return n - Math.floor(n);
   }
 
+  // Both features sit in the right-hand half, which is the part of the hero the
+  // overlay leaves clear — the field has to be readable to be worth showing.
   function onTrail(x, y) {
-    // A 2-cell-wide diagonal across the middle third.
-    var d = Math.abs((y - 26) - 0.42 * (x - 34));
-    return x > 30 && x < 132 && d < 1.6;
+    var d = Math.abs((y - 30) - 0.5 * (x - 86));
+    return x > 84 && x < 162 && d < 2.4;
   }
 
   function inRain(x, y) {
-    var dx = x - 118, dy = y - 68;
-    return dx * dx + dy * dy < 210;
+    var dx = x - 112, dy = y - 72;
+    return dx * dx + dy * dy < 320;
   }
 
   function draw(pass) {
