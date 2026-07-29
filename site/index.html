@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Understory — can radar see logging under the canopy?</title>
+<meta name="description" content="An open benchmark asking whether NISAR L-band coherence can detect forest degradation beneath closed canopy — how early, at what minimum event size, at what false-alarm rate. The answer is not in yet." />
+<meta property="og:title" content="Understory — can radar see logging under the canopy?" />
+<meta property="og:description" content="An open benchmark on NISAR L-band coherence. Kill criteria stated before building; results published favourable or not." />
+<meta property="og:type" content="website" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a0f0c'/%3E%3Cpath d='M16 5l7 12H9zM16 12l6 11H10z' fill='%2357b87b'/%3E%3Crect x='14' y='22' width='4' height='5' fill='%238fa396'/%3E%3C/svg%3E" />
+<style>
+  :root {
+    --ground: #070b08;
+    --panel: #0d130f;
+    --panel-2: #111a14;
+    --ink: #e9efe9;
+    --ink-2: #c3d1c7;
+    --dim: #8fa396;
+    --faint: #5f6f64;
+    --line: #ffffff14;
+    --line-strong: #ffffff2e;
+    --signal: #6fc48d;
+    --signal-deep: #57b87b;
+    --alert: #e8a33d;
+    --reject: #c76e5e;
+
+    --sans: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+    --measure: 64ch;
+    --s-1: 0.8rem;
+    --s0: 1rem;
+    --s1: 1.19rem;
+    --s2: 1.5rem;
+    --s3: 2rem;
+    --s4: clamp(2.4rem, 6.5vw, 4.6rem);
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: var(--s0);
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .shell { max-width: 68rem; margin: 0 auto; padding: 0 clamp(1.1rem, 4vw, 2.5rem); }
+
+  p { margin: 0; max-width: var(--measure); }
+  strong { font-weight: 620; color: var(--ink); }
+
+  a { color: var(--signal); text-decoration-color: #6fc48d55; text-underline-offset: 0.2em; }
+  a:hover { text-decoration-color: currentColor; }
+  a:focus-visible { outline: 2px solid var(--alert); outline-offset: 3px; border-radius: 3px; }
+
+  .mono {
+    font-family: var(--mono);
+    font-size: var(--s-1);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  /* ---------- hero ---------- */
+
+  .hero { position: relative; border-bottom: 1px solid var(--line); overflow: hidden; }
+
+  #field {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    opacity: 0.42;
+  }
+
+  .hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(120% 85% at 12% 0%, #070b0800 30%, #070b08d9 100%),
+      linear-gradient(180deg, #070b08cc 0%, #070b0866 38%, #070b08f2 100%);
+    pointer-events: none;
+  }
+
+  .hero-inner {
+    position: relative;
+    z-index: 1;
+    padding: clamp(3.5rem, 11vw, 8rem) 0 clamp(2.5rem, 6vw, 4rem);
+    display: flex;
+    flex-direction: column;
+    gap: 1.6rem;
+  }
+
+  .wordmark { display: flex; align-items: center; gap: 0.6rem; }
+  .wordmark .glyph {
+    width: 1.4rem; height: 1.4rem; border-radius: 5px;
+    background: linear-gradient(160deg, #2e5c3f, var(--signal-deep));
+    display: grid; place-items: center;
+    font-family: var(--mono); font-size: 0.78rem; font-weight: 600; color: #0a0f0c;
+  }
+  .wordmark .name { font-weight: 620; letter-spacing: 0.01em; }
+
+  h1 {
+    font-size: var(--s4);
+    line-height: 1.02;
+    letter-spacing: -0.032em;
+    font-weight: 660;
+    margin: 0;
+    max-width: 17ch;
+    text-wrap: balance;
+  }
+
+  .hero .standfirst { font-size: var(--s1); color: var(--ink-2); max-width: 54ch; }
+
+  .cta-row { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 0.4rem; }
+
+  .btn {
+    font-family: var(--mono);
+    font-size: var(--s-1);
+    letter-spacing: 0.05em;
+    text-decoration: none;
+    padding: 0.62rem 1.05rem;
+    border-radius: 6px;
+    border: 1px solid var(--line-strong);
+    color: var(--ink);
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .btn:hover { border-color: var(--signal); background: #57b87b12; }
+  .btn.primary { background: var(--signal-deep); border-color: var(--signal-deep); color: #08110b; font-weight: 600; }
+  .btn.primary:hover { background: var(--signal); border-color: var(--signal); }
+
+  /* live legend under the hero canvas */
+  .readout {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1.4rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    color: var(--faint);
+    padding-top: 1.4rem;
+    border-top: 1px solid var(--line);
+  }
+  .readout .swatch { display: inline-flex; align-items: center; gap: 0.42rem; }
+  .readout .dot { width: 9px; height: 9px; border-radius: 2px; }
+  #pass-label { color: var(--dim); font-variant-numeric: tabular-nums; }
+
+  /* ---------- sections ---------- */
+
+  section { padding: clamp(3rem, 7vw, 5.5rem) 0; border-bottom: 1px solid var(--line); }
+
+  .head { display: flex; flex-direction: column; gap: 0.7rem; margin-bottom: 2rem; }
+  h2 {
+    font-size: var(--s3);
+    line-height: 1.14;
+    letter-spacing: -0.024em;
+    font-weight: 640;
+    margin: 0;
+    max-width: 22ch;
+    text-wrap: balance;
+  }
+  h3 { font-size: var(--s0); font-weight: 640; margin: 0; letter-spacing: -0.005em; }
+
+  .prose { display: flex; flex-direction: column; gap: 1.05rem; color: var(--ink-2); }
+  .prose strong { color: var(--ink); }
+
+  /* ---------- status ---------- */
+
+  .status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 2rem;
+  }
+  .status { background: var(--panel); padding: 1.15rem 1.2rem; display: flex; flex-direction: column; gap: 0.35rem; }
+  .status .v {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--s2);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  .status .k { font-size: var(--s-1); color: var(--dim); line-height: 1.5; }
+
+  /* ---------- kill criteria ---------- */
+
+  .kill { border-left: 3px solid var(--alert); background: var(--panel); border-radius: 10px; padding: clamp(1.2rem, 3vw, 1.8rem); }
+
+  .table-scroll { overflow-x: auto; margin-top: 1.5rem; border: 1px solid var(--line); border-radius: 10px; }
+  table { border-collapse: collapse; width: 100%; min-width: 38rem; background: var(--panel); }
+  th, td { text-align: left; padding: 0.8rem 1.1rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  thead th {
+    font-family: var(--mono); font-size: 0.71rem; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--dim); font-weight: 500; white-space: nowrap;
+  }
+  tbody tr:last-child th, tbody tr:last-child td { border-bottom: 0; }
+  tbody th { font-weight: 600; }
+  td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: var(--s-1); white-space: nowrap; color: var(--ink-2); }
+  td.small { font-size: var(--s-1); color: var(--dim); }
+
+  .pill {
+    display: inline-block; font-family: var(--mono); font-size: 0.68rem;
+    letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
+    padding: 0.18rem 0.5rem; border-radius: 4px; border: 1px solid;
+    color: var(--dim); border-color: var(--line-strong);
+  }
+  .pill.pending { color: var(--alert); border-color: #e8a33d66; background: #e8a33d14; }
+
+  /* ---------- built / measured ---------- */
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 1.15rem 1.2rem; display: flex; flex-direction: column; gap: 0.55rem;
+  }
+  .card p { font-size: var(--s-1); color: var(--ink-2); line-height: 1.55; max-width: none; }
+  .card .tag { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
+
+  /* ---------- code ---------- */
+
+  pre {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
+    padding: 1.05rem 1.2rem; overflow-x: auto; margin: 0;
+    font-family: var(--mono); font-size: var(--s-1); line-height: 1.75; color: var(--ink-2);
+  }
+  pre .c { color: var(--faint); }
+  code { font-family: var(--mono); font-size: 0.92em; color: var(--ink-2); }
+
+  .steps { display: flex; flex-direction: column; gap: 1.3rem; }
+
+  /* ---------- footer ---------- */
+
+  footer { padding: 3rem 0 4rem; display: flex; flex-direction: column; gap: 1.1rem; }
+  .foot-links { display: flex; flex-wrap: wrap; gap: 0.6rem 1.5rem; font-family: var(--mono); font-size: var(--s-1); }
+  footer p { font-size: var(--s-1); color: var(--faint); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <canvas id="field" aria-hidden="true"></canvas>
+  <div class="shell hero-inner">
+    <div class="wordmark">
+      <span class="glyph">U</span>
+      <span class="name">Understory</span>
+    </div>
+
+    <h1>Can radar see logging under the canopy?</h1>
+
+    <p class="standfirst">
+      Optical satellites are blocked by cloud and by leaves. NISAR&rsquo;s L-band radar penetrates
+      the canopy and returns from the ground. This is an open benchmark asking whether the
+      coherence between two passes can reveal what happened underneath.
+    </p>
+
+    <div class="cta-row">
+      <a class="btn primary" href="https://github.com/VaishGajaraj/Understory-AI">Read the code</a>
+      <a class="btn" href="#criteria">How it could fail</a>
+    </div>
+
+    <div class="readout">
+      <span id="pass-label">pass 01 / 12</span>
+      <span class="swatch"><span class="dot" style="background:#8fa396"></span>coherence, 12-day pair</span>
+      <span class="swatch"><span class="dot" style="background:#e8a33d"></span>persistent anomaly</span>
+      <span>simulated field — the signal this instrument reads</span>
+    </div>
+  </div>
+</div>
+
+<main>
+
+  <section id="question">
+    <div class="shell">
+      <div class="head">
+        <span class="mono">The question</span>
+        <h2>Scoped as a question, not a platform</h2>
+      </div>
+      <div class="prose">
+        <p>
+          Selective logging leaves skid trails and access roads a few metres wide beneath an
+          otherwise intact canopy. From above, the forest still looks like forest. Below it, the
+          ground has physically changed &mdash; and a radar wavelength long enough to reach the
+          floor should notice when the surface between two passes stops matching itself.
+        </p>
+        <p>
+          <strong>Can NISAR L-band coherence detect documented forest degradation events &mdash;
+          how early, at what minimum event size, and at what false-alarm rate?</strong>
+        </p>
+        <p>
+          Nobody has answered that on real NISAR data. The mission launched in July 2025 and its
+          calibrated stream opened on 20 July 2026. This project intends to publish the answer,
+          favourable or not.
+        </p>
+      </div>
+
+      <div class="status-grid">
+        <div class="status">
+          <span class="v" style="color: var(--alert)">No result</span>
+          <span class="k">The benchmark has not run on real forest data yet. Nothing here claims it works.</span>
+        </div>
+        <div class="status">
+          <span class="v">20 Jul 2026</span>
+          <span class="k">Calibrated NISAR products began flowing. The re-validation gate is now reachable.</span>
+        </div>
+        <div class="status">
+          <span class="v">12 days</span>
+          <span class="k">Repeat cycle &mdash; a hard floor on how fast any alert can possibly arrive.</span>
+        </div>
+        <div class="status">
+          <span class="v">0 pairs</span>
+          <span class="k">Stackable series over the Amazon benchmark area at last probe. The archive is still filling.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="criteria">
+    <div class="shell">
+      <div class="head">
+        <span class="mono">Kill criteria</span>
+        <h2>The conditions under which this project declares itself dead</h2>
+      </div>
+
+      <div class="kill">
+        <div class="prose">
+          <p>
+            These were written before the code was, and they live in the codebase as executable
+            checks rather than as prose. Every benchmark run emits its own verdict &mdash; pass,
+            fail, or insufficient data &mdash; and a run on synthetic data is marked as
+            scaffolding so it can never be mistaken for a claim.
+          </p>
+          <p>
+            If the numbers land short, the failure analysis gets published anyway. A benchmark that
+            can only report good news is not a benchmark.
+          </p>
+        </div>
+
+        <div class="table-scroll">
+          <table>
+            <caption class="mono" style="padding: 0.9rem 1.1rem 0; text-align: left; letter-spacing: 0.08em;">
+              Stated before building
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Criterion</th>
+                <th scope="col">Threshold</th>
+                <th scope="col">Why this number</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Event precision</th>
+                <td class="num">&ge; 70%</td>
+                <td class="small">Against external ground truth, at operationally useful recall. A partner acting on a false alarm loses a field trip.</td>
+                <td><span class="pill pending">Not evaluated</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Minimum detectable size</th>
+                <td class="num">&le; 2 ha</td>
+                <td class="small">Most tropical disturbance events are small. A detector blind below 2 ha misses the majority by count.</td>
+                <td><span class="pill pending">Not evaluated</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Lead over optical alerts</th>
+                <td class="num">&ge; 21 days</td>
+                <td class="small">Median, in cloudy-season tropics, against the earliest operational alert &mdash; not against a single system.</td>
+                <td><span class="pill pending">Not evaluated</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="built">
+    <div class="shell">
+      <div class="head">
+        <span class="mono">What exists</span>
+        <h2>The pipeline is built and measured. The science is not in.</h2>
+      </div>
+
+      <div class="cards">
+        <article class="card">
+          <span class="tag">Ingest</span>
+          <h3>Resumable, idempotent granule retrieval</h3>
+          <p>
+            Retry with backoff, HTTP range resume, length and checksum verification, and a state
+            store so a killed build restarts where it stopped instead of trusting a truncated file.
+          </p>
+        </article>
+        <article class="card">
+          <span class="tag">Detection</span>
+          <h3>Legible statistics before machine learning</h3>
+          <p>
+            A rolling robust baseline per pixel, then persistence, clustering and geometry filters.
+            Machine learning enters only if the benchmark shows it beats the filters.
+          </p>
+        </article>
+        <article class="card">
+          <span class="tag">Memory</span>
+          <h3>Bounded by budget, not by area</h3>
+          <p>
+            A year of 20&nbsp;m coherence over one frame is about 19&nbsp;GB. The baseline runs in
+            spatial tiles, and tiled results are asserted bit-identical to untiled ones.
+          </p>
+        </article>
+        <article class="card">
+          <span class="tag">Capacity</span>
+          <h3>Compute is not the constraint</h3>
+          <p>
+            A 12-day cycle for a 100&nbsp;km area costs about 38 seconds per frame group &mdash;
+            two hundredths of one percent of the window. Data movement is the real cost.
+          </p>
+        </article>
+        <article class="card">
+          <span class="tag">Scoring</span>
+          <h3>Reports are generated, never written</h3>
+          <p>
+            Precision, recall, detection latency, lead over optical, a minimum-size curve, and a
+            calibration table. Published tables come from these files or they do not exist.
+          </p>
+        </article>
+        <article class="card">
+          <span class="tag">Honesty</span>
+          <h3>Confidence has to be earned</h3>
+          <p>
+            Of alerts emitted at a score near 0.8, about 80% should confirm. An overconfident score
+            is treated as a defect of the same severity as a missed detection.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="run">
+    <div class="shell">
+      <div class="head">
+        <span class="mono">Run it</span>
+        <h2>Everything reproduces from one command</h2>
+      </div>
+
+      <div class="steps">
+        <div class="prose">
+          <p>
+            The toy benchmark needs no credentials and no network. It generates a synthetic scene
+            containing one persistent road and one transient rain blob, runs the detector, and
+            asserts that it finds the first and ignores the second.
+          </p>
+        </div>
+<pre><span class="c"># synthetic end-to-end, no credentials needed</span>
+make toy-bench
+
+<span class="c"># capacity: a cycle's work arriving as a burst</span>
+make load-test
+
+<span class="c"># against the real archive (needs NASA Earthdata credentials)</span>
+uv run python scripts/probe_archive.py benchmarks/amazon-para/aoi.yaml</pre>
+        <div class="prose">
+          <p>
+            Every benchmark run also writes a QGIS-loadable alerts layer next to its report &mdash;
+            the delivery format field partners already use.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="scope">
+    <div class="shell">
+      <div class="head">
+        <span class="mono">Scope</span>
+        <h2>Civilian, terrain not people, conservative by default</h2>
+      </div>
+      <div class="prose">
+        <p>
+          This instrument reads ground disturbance, not activity. A 12-day repeat cycle makes it an
+          infrastructure-and-pattern instrument by physics rather than by policy. Sensitive
+          geographies are handled under a published governance standard, and defense applications
+          are deliberately out of scope for this repository.
+        </p>
+        <p>
+          The code is Apache-2.0 and the label library is CC-BY 4.0, governed and versioned
+          separately from the code, because open data outlives pipelines.
+        </p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="shell">
+    <div class="foot-links">
+      <a href="https://github.com/VaishGajaraj/Understory-AI">Repository</a>
+      <a href="https://github.com/VaishGajaraj/Understory-AI/blob/main/docs/METHODOLOGY.md">Methodology</a>
+      <a href="https://github.com/VaishGajaraj/Understory-AI/blob/main/docs/PERFORMANCE.md">Capacity</a>
+      <a href="https://github.com/VaishGajaraj/Understory-AI/blob/main/docs/GOVERNANCE.md">Governance</a>
+      <a href="https://github.com/VaishGajaraj/Understory-AI/blob/main/CONTRIBUTING.md">Contributing</a>
+    </div>
+    <p>
+      Code Apache-2.0 &middot; label dataset CC-BY 4.0 &middot; NISAR data courtesy NASA/ISRO via the
+      Alaska Satellite Facility. The field above is a simulation of the measurement, not real
+      acquired data.
+    </p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var canvas = document.getElementById('field');
+  var label = document.getElementById('pass-label');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d', { alpha: false });
+  if (!ctx) return;
+
+  // A coarse coherence grid, upscaled. Speckle is multiplicative and coarse on
+  // purpose: this reads as radar, not as television static.
+  var COLS = 168, ROWS = 96, PASSES = 12;
+  var TRAIL_ONSET = 6;   // a skid trail appears and stays
+  var RAIN_PASS = 4;     // weather decorrelates once, then recovers
+  var PERSIST = 2;       // an anomaly must recur before it counts
+
+  var buf = document.createElement('canvas');
+  buf.width = COLS; buf.height = ROWS;
+  var bctx = buf.getContext('2d');
+  var img = bctx.createImageData(COLS, ROWS);
+
+  // Deterministic noise so the field is stable frame to frame within a pass.
+  function hash(x, y, t) {
+    var n = Math.sin(x * 12.9898 + y * 78.233 + t * 37.719) * 43758.5453;
+    return n - Math.floor(n);
+  }
+
+  function onTrail(x, y) {
+    // A 2-cell-wide diagonal across the middle third.
+    var d = Math.abs((y - 26) - 0.42 * (x - 34));
+    return x > 30 && x < 132 && d < 1.6;
+  }
+
+  function inRain(x, y) {
+    var dx = x - 118, dy = y - 68;
+    return dx * dx + dy * dy < 210;
+  }
+
+  function draw(pass) {
+    var d = img.data;
+    for (var y = 0; y < ROWS; y++) {
+      for (var x = 0; x < COLS; x++) {
+        var base = 0.56 + 0.16 * (hash(x >> 1, y >> 1, 0) - 0.5);
+        var c = base + 0.20 * (hash(x, y, pass + 1) - 0.5);
+
+        var disturbed = false;
+        if (onTrail(x, y) && pass >= TRAIL_ONSET) {
+          c = 0.10 + 0.06 * hash(x, y, pass + 9);
+          disturbed = pass >= TRAIL_ONSET + PERSIST - 1;
+        } else if (inRain(x, y) && pass === RAIN_PASS) {
+          // Transient: deep drop, but it never recurs, so it never survives
+          // the persistence filter — which is the whole point.
+          c = 0.26 + 0.10 * hash(x, y, pass + 3);
+        }
+
+        c = c < 0 ? 0 : c > 1 ? 1 : c;
+        var i = (y * COLS + x) * 4;
+        var r = 10 + c * 176, g = 18 + c * 196, b = 14 + c * 168;
+
+        if (disturbed) { r = r * 0.35 + 232 * 0.65; g = g * 0.35 + 163 * 0.65; b = b * 0.35 + 61 * 0.65; }
+
+        d[i] = r; d[i + 1] = g; d[i + 2] = b; d[i + 3] = 255;
+      }
+    }
+    bctx.putImageData(img, 0, 0);
+
+    var w = canvas.clientWidth, h = canvas.clientHeight;
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(buf, 0, 0, canvas.width, canvas.height);
+
+    if (label) {
+      label.textContent = 'pass ' + String(pass + 1).padStart(2, '0') + ' / ' + PASSES;
+    }
+  }
+
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var pass = 0, timer = null;
+
+  function stop() { if (timer) { clearInterval(timer); timer = null; } }
+
+  function start() {
+    stop();
+    if (reduced.matches) { draw(TRAIL_ONSET + PERSIST); return; }
+    draw(pass);
+    timer = setInterval(function () {
+      pass = (pass + 1) % PASSES;
+      draw(pass);
+    }, 1100);
+  }
+
+  window.addEventListener('resize', function () { draw(pass); });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) stop(); else start();
+  });
+  if (reduced.addEventListener) reduced.addEventListener('change', start);
+
+  start();
+})();
+</script>
+
+</body>
+</html>
