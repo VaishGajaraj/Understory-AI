@@ -51,7 +51,12 @@ class V0FilterDetector:
         persistent = persistence_filter(candidates, cfg.filters.min_persistence_pairs)
         clustered = cluster_filter(persistent, cfg.filters.min_cluster_pixels)
 
-        events = extract_events(clustered, deficit, id_prefix=f"{self.name}-{stack.aoi.name}")
+        events = extract_events(
+            clustered,
+            deficit,
+            id_prefix=f"{self.name}-{stack.aoi.name}",
+            crs=stack.crs,
+        )
         return [
             Detection(
                 id=e["id"],
@@ -72,8 +77,13 @@ REGISTRY: dict[str, type] = {
 }
 
 
-def build_detector(name: str):
+def build_detector(name: str, config: dict | None = None):
     if name not in REGISTRY:
         known = ", ".join(sorted(REGISTRY))
         raise KeyError(f"unknown detector '{name}' (known: {known})")
-    return REGISTRY[name]()
+    detector_type = REGISTRY[name]
+    if detector_type is V0FilterDetector:
+        return detector_type(V0Config.model_validate(config or {}))
+    if config:
+        raise ValueError(f"detector '{name}' does not accept configuration")
+    return detector_type()

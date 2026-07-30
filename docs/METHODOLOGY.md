@@ -1,6 +1,6 @@
 # Understory Benchmark Methodology
 
-**Version 0.1.1 (draft)** — this document is versioned alongside the code because, for a benchmark project, the method is the citable artifact. Reviewers must be able to point at a frozen version; results reports record the methodology version they were produced under.
+**Version 0.1.2 (draft)** — this document is versioned alongside the code because, for a benchmark project, the method is the citable artifact. Reviewers must be able to point at a frozen version; results reports record the methodology version they were produced under.
 
 ## 1. Question
 
@@ -17,7 +17,8 @@ Repeat-pass interferometric coherence change detection on NISAR L2 products, 12-
 3. **Spatial clustering**: connected components ≥ 12 pixels.
 4. **Geometry**: linearity/elongation score reported per event; threshold disabled by default in v0.
 
-All thresholds live in benchmark config files, never in code.
+All thresholds are serialized in benchmark config files and copied into reports. Code defaults
+exist only to make detector construction ergonomic; a publishable benchmark uses the frozen config.
 
 ## 4. Scoring
 
@@ -38,7 +39,7 @@ These thresholds live in code (`understory_detect.kill_criteria`), are evaluated
 
 Every report includes a calibration table: detections binned by score, with the confirmed-match rate per bin and the expected calibration error. The standard the detector is held to: of detections emitted at ~0.8 score, ~80% should confirm. An overconfident score costs a partner a wasted field trip and is treated as a defect of the same severity as a missed detection.
 
-Known v0 synthetic bound: with default thresholds (12-pixel cluster minimum), the smallest planted event detected in synthetic sweeps is ~3.7 ha (`scripts/size_sweep.py`) — above the 2 ha criterion. The cluster minimum is the binding constraint and is the first tuning target when real controlled-disturbance data arrives. Synthetic pixels are ~55 m; real GUNW posting is finer, so the synthetic bound is conservative.
+Known v0 synthetic bound: with default thresholds (12-pixel cluster minimum), the smallest planted event detected in synthetic sweeps is ~3.7 ha (`scripts/size_sweep.py`) — above the 2 ha criterion. The real benchmark explicitly selects the delivered 20 m GUNW coherence grid; silently selecting the 80 m grid would make the 2 ha criterion physically incompatible with the default cluster threshold.
 
 ## 6. Known caveats
 
@@ -50,5 +51,6 @@ Known v0 synthetic bound: with default thresholds (12-pixel cluster minimum), th
 
 ## Changelog
 
+- **0.1.2** (2026-07): explicitly select the 20 m coherence grid; preserve raster CRS through detection and export alert geometry as EPSG:4326; serialize detector thresholds in benchmark configs and reports.
 - **0.1.1** (2026-07): document forest/terrain mask join; reports include mean match IoU and a Markdown twin.
 - **0.1.0** (2026-07): initial draft; matching tolerances and v0 detector defined ahead of first data contact — expect revision on contact.

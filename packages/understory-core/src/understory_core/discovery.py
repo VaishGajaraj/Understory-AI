@@ -6,10 +6,10 @@ which this module encodes:
 - One L2 GUNW granule IS one interferometric pair — reference and secondary
   acquisition windows are encoded in the scene name. Pairing happens upstream
   at the NISAR SDS; discovery parses it, it does not construct it.
-- Products exist in three calibration tiers: BETA (pre-calibration, the bulk
-  of today's archive), PROVISIONAL, and validated V1 (the calibrated Jul 2026+
-  stream, filling as the backlog reprocesses). Benchmark results on BETA carry
-  the mandatory re-validation caveat from METHODOLOGY.md.
+- Products exist in three maturity tiers: BETA (pre-calibration), PROVISIONAL
+  (calibrated and partially validated, available from June 2026 acquisitions),
+  and validated V1 (expected with the Q4 2026 reprocessing campaign). Final
+  benchmark results are re-run on validated V1.
 """
 
 from __future__ import annotations
