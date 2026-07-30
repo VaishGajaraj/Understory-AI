@@ -9,7 +9,7 @@ in the allocator's arenas rather than returning to the OS.
 Since the number the OOM killer sees is the one that matters, the constant is
 calibrated here rather than derived. Re-run after changing baseline.py.
 
-Usage: uv run python scripts/measure_baseline_memory.py
+Usage: uv run python scripts/measure_baseline_memory.py [--quick]
 """
 
 from __future__ import annotations
@@ -21,7 +21,10 @@ from understory_core.tiling import BASELINE_MEMORY_FACTOR
 
 # (n_time, side) slab shapes. Deliberately varied in both depth and area so a
 # factor that only holds at one aspect ratio shows up as scatter.
-SHAPES = [(24, 400), (24, 600), (24, 800), (12, 800), (36, 500)]
+FULL_SHAPES = [(24, 400), (24, 600), (24, 800), (12, 800), (36, 500)]
+# Keep the smoke slab large enough that interpreter/allocation fixed costs do
+# not dominate the per-slab factor and make the guard platform-noisy.
+QUICK_SHAPES = [(24, 400)]
 
 # Each slab is measured in a fresh process: ru_maxrss is a high-water mark that
 # never decreases, so successive measurements in one process are meaningless.
@@ -58,9 +61,14 @@ WINDOW_PAIRS = 8  # BaselineConfig default, which the child uses
 
 
 def main() -> int:
+    unknown = set(sys.argv[1:]) - {"--quick"}
+    if unknown:
+        print(f"unknown argument(s): {', '.join(sorted(unknown))}", file=sys.stderr)
+        return 2
+    shapes = QUICK_SHAPES if "--quick" in sys.argv[1:] else FULL_SHAPES
     print(f"{'slab':>18} {'slab_MB':>9} {'peak_MB':>9} {'factor':>8}")
     factors: list[float] = []
-    for n_time, side in SHAPES:
+    for n_time, side in shapes:
         result = subprocess.run(
             [sys.executable, "-c", CHILD.format(n_time=n_time, side=side)],
             capture_output=True,

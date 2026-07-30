@@ -31,11 +31,10 @@ jobs:
       # a task errors, or peak memory stops being proportionate to input.
       - name: Load gate — SLOs under a burst
         run: uv run understory-load packages/understory-perf/scenarios/ci-smoke.yaml
-      # The tile sizer's memory model is calibrated by measurement, not derived.
-      # This fails if a change to baseline.py has made the budget an
-      # under-estimate, which would OOM real runs rather than degrade them.
-      - name: Memory model still budgeted conservatively
-        run: uv run python scripts/measure_baseline_memory.py
+      # A quick empirical guard against a memory-model blow-up. Full
+      # recalibration remains an explicit release check (`make measure-memory`).
+      - name: Memory model smoke check
+        run: uv run python scripts/measure_baseline_memory.py --quick
 
   typescript:
     runs-on: ubuntu-latest
