@@ -8,11 +8,13 @@ const toyRoad: DisturbanceEvent = {
   id: 'toy-road-001',
   geometry: { type: 'Point', coordinates: [-55.0, -7.001] },
   dateWindow: { start: '2026-02-01', end: '2026-02-13' },
-  class: 'access-road',
+  eventClass: 'access-road',
   status: 'confirmed',
   biome: 'toy',
   evidenceSource: 'synthetic fixture — generated, not observed',
-  areaHa: 1.5,
+  areaHa: 24.0,
+  opticalAlertDate: '2026-03-20',
+  locationPrecision: 'exact',
 }
 
 describe('label type contract', () => {

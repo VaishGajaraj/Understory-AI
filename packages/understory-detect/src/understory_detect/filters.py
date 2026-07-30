@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import numpy as np
 import xarray as xr
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from scipy import ndimage
 
 # 8-connectivity: diagonal pixels belong to the same feature (roads run diagonally).
@@ -27,8 +27,10 @@ def label_components(mask: np.ndarray) -> tuple[np.ndarray, int]:
 
 
 class FilterConfig(BaseModel):
-    min_persistence_pairs: int = 2
-    min_cluster_pixels: int = 12
+    # >= 1 enforced: persistence is the single most powerful false-alarm cut
+    # available, and a config of 0 would disable it silently rather than loudly.
+    min_persistence_pairs: int = Field(default=2, ge=1)
+    min_cluster_pixels: int = Field(default=12, ge=1)
     min_linearity: float = 0.0  # 0 disables the geometry cut; tune on the benchmark
 
 
@@ -37,9 +39,28 @@ def persistence_filter(candidates: xr.DataArray, min_pairs: int) -> xr.DataArray
 
     A pixel survives at time t if every step in [t - min_pairs + 1, t] was a
     candidate.
+
+    Done as a chain of shifted ANDs rather than a rolling sum. ``rolling().sum()``
+    upcasts the boolean mask to float64 and materializes a (time, y, x, window)
+    array, which costs ~16x the mask; over a real frame that was 1.5 GB of
+    float64 arithmetic to answer a question about booleans. This holds at most
+    two boolean arrays at once and gives identical results.
     """
-    run = candidates.rolling(time=min_pairs, min_periods=min_pairs).sum()
-    return (run >= min_pairs).fillna(False)
+    if min_pairs < 1:
+        raise ValueError(
+            f"min_pairs must be >= 1, got {min_pairs} — a non-positive persistence window "
+            "would disable the filter rather than widen it"
+        )
+    if min_pairs == 1:
+        # Every candidate survives, but return a copy: the old rolling
+        # implementation always produced a fresh array, and aliasing the
+        # caller's mask here would let a downstream in-place write reach back
+        # into it.
+        return candidates.copy()
+    surviving = candidates
+    for offset in range(1, min_pairs):
+        surviving = surviving & candidates.shift(time=offset, fill_value=False)
+    return surviving
 
 
 def cluster_filter(mask: xr.DataArray, min_pixels: int) -> xr.DataArray:

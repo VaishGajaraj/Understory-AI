@@ -1,31 +1,57 @@
-# NISAR archive status — first contact notes
+# NISAR archive status - first contact notes
 
-**As of 2026-07-30.** Rerun `scripts/probe_archive.py` over any AOI for the current picture; this file records findings that shaped the code, not a live inventory.
+**As of 2026-07-30.** Rerun `understory inventory` for the current picture; this file records
+findings that shaped the code, not a live inventory.
 
-## Provisional-stream update — 30 July 2026
+## Provisional-stream update - 30 July 2026
 
-- The fully calibrated, partially validated `NISAR_L2_GUNW_PROVISIONAL_V1` collection is now searchable for acquisitions beginning 17 June 2026.
-- Pará (`amazon-para`) returns 9 GUNW pairs: 2 are 12-day pairs, but they fall in different frame groups. The longest usable per-frame series is still 1 pair.
-- Eastern woodland returns 6 pairs (1 usable 12-day pair). Amazon mining returns 12 pairs (4 usable), again with only 1 pair per frame group.
-- `NISAR_L2_GUNW_V1` remains empty over Pará. No benchmark AOI yet has the 6 consecutive pairs needed for baseline history plus persistence.
+- The fully calibrated, partially validated `NISAR_L2_GUNW_PROVISIONAL_V1` collection is
+  searchable for acquisitions beginning 17 June 2026.
+- Pará (`amazon-para`) returns 9 GUNW pairs: 2 are 12-day pairs, but they fall in different frame
+  groups. The longest usable per-frame series is still 1 pair.
+- Eastern woodland returns 6 pairs (1 usable 12-day pair). Amazon mining returns 12 pairs
+  (4 usable), again with only 1 pair per frame group.
+- `NISAR_L2_GUNW_V1` remains empty over Pará. No benchmark AOI yet has the 6 consecutive pairs
+  needed for baseline history plus persistence.
 
-The archive is no longer empty, so one-pair real-data smoke tests are now actionable. A scientific benchmark verdict remains blocked on time-series depth.
+The archive is no longer empty, so one-pair real-data smoke tests are actionable. A scientific
+benchmark verdict remains blocked on time-series depth.
 
 ## What the archive actually looks like
 
-- **GUNW granules are pairs.** One L2 GUNW granule is one geocoded interferometric pair; reference and secondary acquisition windows are encoded in the scene name (four timestamps). Discovery parses pairing — it does not construct it. This replaced the original single-acquisition pairing design in `understory_core.discovery`.
-- **Three calibration tiers**, as separate CMR collections: `NISAR_L2_GUNW_BETA_V1` (10,217 granules globally at probe time), `..._PROVISIONAL_V1` (empty), `..._V1` validated (empty). The validated tier filling up through late 2026 is the re-validation gate from METHODOLOGY.md becoming actionable.
-- **`asf_search` works with `shortName=`** against these collections; the generic `dataset=NISAR` search surfaces only ancillary products (ECMWF soil moisture, clock files) and is not useful for imagery.
-- **Distribution**: HTTPS via `nisar.asf.earthdatacloud.nasa.gov` plus direct `s3://sds-n-cumulus-prod-nisar-products/...` URLs in granule metadata — the in-region S3 design in DATA_ACCESS.md is confirmed viable.
-- **Useful properties** on each result: `pathNumber` (track), `frameNumber`, `flightDirection`, `startTime`/`stopTime` (reference start → secondary end), `s3Urls`, `sceneName`.
+- **GUNW granules are pairs.** One L2 GUNW granule is one geocoded interferometric pair;
+  reference and secondary acquisition windows are encoded in the scene name. Discovery parses
+  pairing - it does not construct it.
+- **Three calibration tiers are separate CMR collections:** BETA, PROVISIONAL, and validated V1.
+  Do not combine them in one time series.
+- **`asf_search` works with `shortName=`** against these collections; a generic dataset search can
+  surface ancillary products instead of imagery.
+- **Distribution includes HTTPS and direct S3 URLs.** In-region S3 remains the production target;
+  local retrieval is the tested engineering path.
+- **Useful properties** include path/track, frame, flight direction, reference and secondary
+  timestamps, distribution URLs, scene name, file size, and a catalog MD5 when CMR publishes one.
 
-## Coverage found at probe time
+## Product-quality false-alarm sources
 
-- **Amazon basin**: 232 GUNW BETA pairs total, span 2025-10-22 → 2026-01-07, almost all frames having a single pair — not yet stackable. The Novo Progresso benchmark AOI (`benchmarks/amazon-para`) had **zero** GUNW coverage.
-- **Best stackable series found**: track 99, frames 76/77 (descending, NW Mexico) — 6 consecutive 12-day pairs, 2025-11-05 → 2026-01-04. Useful as a first real-data engineering target even though it is not a forest benchmark geography.
+- BETA radiometric banding is especially relevant over uniform radar cross-section such as
+  tropical forest.
+- RFI can produce decorrelation streaks that resemble linear disturbance.
+- Residual ionospheric artifacts can also produce decorrelation structure, especially at L-band.
+- Processor changes between maturity tiers can resemble landscape change.
+
+These are detector inputs and quality flags, not footnotes. Stack construction rejects mixed
+calibration tiers, and final benchmark results must be rerun on validated products.
+
+## Earlier BETA probe
+
+- Amazon-basin coverage was sparse and mostly single-pair per frame.
+- Track 99, frames 76/77 over northwest Mexico had six consecutive 12-day BETA pairs and remains a
+  useful engineering target, but it is not forest ground truth and cannot answer the benchmark.
 
 ## Implications for sequencing
 
-1. Ingest development (`extract_coherence` from GUNW HDF5) can proceed now against any BETA granule.
-2. The Amazon benchmark waits on backlog reprocessing — poll with the probe script; the moment a Pará frame accumulates ~6+ consecutive pairs, the real benchmark unblocks.
-3. Everything computed on BETA products carries the documented radiometric-artifact caveat and must be re-validated on `NISAR_L2_GUNW_V1` when it fills.
+1. Use a PROVISIONAL pair for the real retrieval/extraction/resume smoke test.
+2. Continue anonymous inventory polling until one target frame has at least six consecutive pairs.
+3. Freeze the product identity before any exploratory benchmark.
+4. Treat all BETA-derived behavior as engineering evidence only.
+5. Revalidate every published result on validated V1.

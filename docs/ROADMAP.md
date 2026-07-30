@@ -14,6 +14,9 @@ Honest sequencing for the **open** NISAR forest-degradation benchmark. Dates are
 - [x] Markdown twin of every machine-readable benchmark report
 - [x] Unified operator CLI for environment diagnostics, JSON archive inventory, and benchmark runs
 - [x] Versioned run manifest with config hash, software version, application, and stack provenance
+- [x] Resumable range downloads, catalog size/checksum verification, and a durable ingest manifest
+- [x] Incremental, resumable Zarr stack construction with bounded spatial chunks
+- [x] Synthetic NISAR-scale capacity/SLO harness and a local report/alert review viewer
 - [x] Production and NISAR opportunity strategy grounded in official product boundaries
 
 ## Now (unblocks a real published number)

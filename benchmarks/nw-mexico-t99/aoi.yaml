@@ -1,0 +1,20 @@
+# Engineering target, not a science benchmark: the deepest stackable GUNW
+# series in the archive today (track 99, frames 74/75, descending — 7
+# consecutive 12-day BETA pairs, 2025-10-24 .. 2026-01-04, probed live
+# 2026-07-27). Dry Sierra Madre foothills, no forest labels, no scoring —
+# this AOI exists so the real-data plumbing (auth, fetch, stack build,
+# detection) runs end to end while the forest AOIs accumulate PROVISIONAL
+# pairs. Delete it the day a forest series is stackable.
+name: nw-mexico-t99
+description: >
+  Deepest stackable NISAR GUNW series at first live probe; engineering
+  target only. See scripts/run_live.py.
+biome: sierra-madre-dry-forest
+geometry:
+  type: Polygon
+  coordinates:
+    - - [-109.5, 27.0]
+      - [-108.0, 27.0]
+      - [-108.0, 28.5]
+      - [-109.5, 28.5]
+      - [-109.5, 27.0]

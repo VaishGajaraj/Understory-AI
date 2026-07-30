@@ -9,15 +9,22 @@ dependencies = [
     "understory-core",
     "understory-detect",
     "understory-labels",
+    "understory-perf",
 ]
 
 [tool.uv.workspace]
-members = ["packages/understory-core", "packages/understory-detect", "packages/understory-labels"]
+members = [
+    "packages/understory-core",
+    "packages/understory-detect",
+    "packages/understory-labels",
+    "packages/understory-perf",
+]
 
 [tool.uv.sources]
 understory-core = { workspace = true }
 understory-detect = { workspace = true }
 understory-labels = { workspace = true }
+understory-perf = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -48,12 +55,14 @@ reportMissingImports = false
 # Architecture as lint rules: the package dependency graph is enforced,
 # not documented. detect -> {core, labels}; core and labels import nothing internal.
 [tool.importlinter]
-root_packages = ["understory_core", "understory_detect", "understory_labels"]
+root_packages = ["understory_core", "understory_detect", "understory_labels", "understory_perf"]
 
 [[tool.importlinter.contracts]]
 name = "Package dependency direction"
 type = "layers"
+# understory_perf sits on top: it drives the pipeline, nothing imports it.
 layers = [
+    "understory_perf",
     "understory_detect",
     "understory_core : understory_labels",
 ]

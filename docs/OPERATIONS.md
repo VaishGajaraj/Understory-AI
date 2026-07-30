@@ -70,9 +70,13 @@ version, generation time, and available stack provenance.
 
 ## Current production gaps
 
-- Full-granule retrieval is resumable only at the workflow level, not by byte range.
-- Checksums from archive metadata are not yet enforced after download.
-- There is no job queue, hosted API, authentication layer, or operations dashboard.
+- Retrieval resumes partial HTTP transfers, verifies catalog sizes and available MD5 values, and
+  records completed granules in a durable SQLite manifest. Archive records do not always publish a
+  checksum, so `checksum_verified=false` remains an explicit provenance state.
+- Stack construction appends one pair at a time and can resume only when the frozen frame, tier,
+  layer selection, and committed time prefix still match.
+- The local viewer supports report inspection and alert triage, but there is no shared review store,
+  job queue, hosted API, authentication layer, or operations dashboard.
 - Alert review states and held-out real labels are not yet complete.
 - Validated NISAR products have not yet been used for a final result.
 
