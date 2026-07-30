@@ -199,22 +199,32 @@ def _normalize_weather_ds(ds: xr.Dataset) -> xr.Dataset:
 def _sample_onto_grid(raster: xr.DataArray, grid: xr.DataArray) -> xr.DataArray:
     """Nearest-neighbor sample ``raster`` onto the (y, x) of ``grid``.
 
-    Stack grids are geographic (lon/lat). When the source raster is also
-    geographic, sample with xarray ``interp``. When it carries a projected
-    CRS (GeoTIFF via rioxarray), reproject-match onto a lon/lat template.
+    Geographic source/target pairs use xarray interpolation. Any projected
+    source or target uses CRS-aware ``reproject_match``; real GUNW stacks stay
+    in their native projected frame CRS through detection.
     """
     sample_grid = grid if set(grid.dims) == {"y", "x"} else grid.isel(time=0)
     raster = _ensure_yx(raster)
 
     src_crs = _raster_crs(raster)
-    geographic = src_crs is None or src_crs.upper() in ("EPSG:4326", "OGC:CRS84")
-    if geographic and _coords_look_geographic(raster):
+    if src_crs is None and _coords_look_geographic(raster):
+        src_crs = "EPSG:4326"
+    target_crs = _raster_crs(sample_grid)
+    if target_crs is None and _coords_look_geographic(sample_grid):
+        target_crs = "EPSG:4326"
+
+    if src_crs is None or target_crs is None:
+        raise ValueError("source and target rasters need a CRS or recognizable lon/lat coordinates")
+
+    src_geographic = src_crs.upper() in ("EPSG:4326", "OGC:CRS84")
+    target_geographic = target_crs.upper() in ("EPSG:4326", "OGC:CRS84")
+    if src_geographic and target_geographic:
         sampled = raster.interp(x=sample_grid["x"], y=sample_grid["y"], method="nearest")
         return sampled.astype(
             raster.dtype if np.issubdtype(raster.dtype, np.floating) else raster.dtype
         )
 
-    # Projected source: build a lon/lat template and reproject_match.
+    # Any projected grid: build a template in the target CRS and reproject-match.
     try:
         import rioxarray  # noqa: F401
     except ImportError as e:  # pragma: no cover
@@ -224,10 +234,10 @@ def _sample_onto_grid(raster: xr.DataArray, grid: xr.DataArray) -> xr.DataArray:
         np.zeros((sample_grid.sizes["y"], sample_grid.sizes["x"]), dtype=np.float32),
         dims=("y", "x"),
         coords={"y": sample_grid["y"], "x": sample_grid["x"]},
-    ).rio.write_crs("EPSG:4326")
-    src = raster if _raster_crs(raster) else raster.rio.write_crs(src_crs or "EPSG:4326")
+    ).rio.write_crs(target_crs)
+    src = raster if _raster_crs(raster) else raster.rio.write_crs(src_crs)
     if not _raster_crs(src):
-        src = src.rio.write_crs(src_crs or "EPSG:4326")
+        src = src.rio.write_crs(src_crs)
     matched = src.rio.reproject_match(template, resampling=_nearest_resampling())
     return xr.DataArray(
         matched.values,
