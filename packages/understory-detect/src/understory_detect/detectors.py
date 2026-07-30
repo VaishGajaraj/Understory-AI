@@ -44,6 +44,10 @@ class V0FilterDetector:
             deficit = anomaly_deficit(coherence, cfg.baseline)
         candidates = (deficit > cfg.baseline.anomaly_sigma).fillna(False)
 
+        # Optional forest/terrain validity mask joined at stack-build time.
+        if stack.valid is not None:
+            candidates = candidates.where(stack.valid.load(), other=False)
+
         persistent = persistence_filter(candidates, cfg.filters.min_persistence_pairs)
         clustered = cluster_filter(persistent, cfg.filters.min_cluster_pixels)
 

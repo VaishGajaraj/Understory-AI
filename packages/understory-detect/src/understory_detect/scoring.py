@@ -61,6 +61,9 @@ class BenchmarkReport(BaseModel):
     median_detection_latency_days: float | None = None
     median_lead_over_optical_days: float | None = None
     n_events_with_optical_record: int = 0
+    # Mean spatial IoU over matched pairs — reported for honesty; not a match
+    # requirement in v0 (see MatchingTolerances.min_spatial_iou).
+    mean_match_iou: float | None = None
     # Minimum-detectable-size curve: recall per event-area bin, over confirmed
     # labels that carry area_ha. Keys like "0-1", "1-2", "2-5", "5-20", "20+".
     recall_by_area_ha: dict[str, float] = Field(default_factory=dict)
@@ -128,6 +131,9 @@ def score(
     )
     median_lead = float(leads[len(leads) // 2]) if leads else None
 
+    ious = [_iou(shape(det.geometry), shape(ev.geometry)) for det, ev in matches]
+    mean_iou = float(sum(ious) / len(ious)) if ious else None
+
     return BenchmarkReport(
         benchmark=benchmark,
         detector=detector,
@@ -146,6 +152,7 @@ def score(
         median_detection_latency_days=median_latency,
         median_lead_over_optical_days=median_lead,
         n_events_with_optical_record=len(with_optical),
+        mean_match_iou=mean_iou,
         recall_by_area_ha=_recall_by_area(confirmed, {id(ev) for _, ev in matches}),
         calibration=_calibration(detections, {id(det) for det, _ in matches}),
     )
@@ -225,3 +232,10 @@ def _distance_m(a, b) -> float:
     dx = (a.x - b.x) * 111_320 * math.cos(lat)
     dy = (a.y - b.y) * 110_540
     return math.hypot(dx, dy)
+
+
+def _iou(a, b) -> float:
+    """Polygon intersection-over-union; 0 when either geometry is empty."""
+    inter = a.intersection(b).area
+    union = a.union(b).area
+    return float(inter / union) if union > 0 else 0.0

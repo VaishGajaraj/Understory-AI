@@ -21,9 +21,10 @@ from understory_labels.events import load_collection
 
 from understory_detect import kill_criteria
 from understory_detect.detectors import build_detector
+from understory_detect.report import render_markdown
 from understory_detect.scoring import score
 
-METHODOLOGY_VERSION = "0.1.0"
+METHODOLOGY_VERSION = "0.1.1"
 
 
 class BenchmarkConfig(BaseModel):
@@ -81,6 +82,11 @@ def run_benchmark(config_path: Path) -> dict:
     out = base / config.report_out
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report_dict, indent=2) + "\n")
+
+    # Human-readable twin of the JSON — publishable tables are generated, never
+    # hand-assembled.
+    md_out = out.with_suffix(".md")
+    md_out.write_text(render_markdown(report_dict))
 
     # QGIS-loadable alert layer next to the report — the format partners
     # already use, per the theory of change.

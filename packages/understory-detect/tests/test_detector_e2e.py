@@ -88,3 +88,15 @@ def test_quiet_stack_yields_no_detections():
     )
     stack = CoherenceStack(dataset, synthetic_stack().aoi)
     assert V0FilterDetector().detect(stack) == []
+
+
+def test_valid_mask_suppresses_detections_outside_forest():
+    stack = synthetic_stack()
+    n = stack.coherence.sizes["y"]
+    # Mask out everything — detector must emit nothing even though the line is there.
+    mask = xr.DataArray(
+        np.zeros((n, n), dtype=bool),
+        dims=("y", "x"),
+        coords={"y": stack.coherence["y"], "x": stack.coherence["x"]},
+    )
+    assert V0FilterDetector().detect(stack.with_valid_mask(mask)) == []
