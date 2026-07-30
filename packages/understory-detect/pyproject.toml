@@ -16,6 +16,7 @@ dependencies = [
     "scikit-image>=0.22",
     "geopandas>=1.0",
     "shapely>=2.0",
+    "pyproj>=3.6",
     "pydantic>=2.6",
     "pyyaml>=6.0",
 ]

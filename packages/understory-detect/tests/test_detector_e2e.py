@@ -9,10 +9,11 @@ from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
 import xarray as xr
+from pyproj import Transformer
 from shapely.geometry import shape
 from understory_core.aoi import AreaOfInterest
 from understory_core.stack import CoherenceStack
-from understory_detect.detectors import V0FilterDetector
+from understory_detect.detectors import V0FilterDetector, build_detector
 
 TIMES = pd.date_range("2026-01-01", periods=8, freq="12D")
 
@@ -100,3 +101,27 @@ def test_valid_mask_suppresses_detections_outside_forest():
         coords={"y": stack.coherence["y"], "x": stack.coherence["x"]},
     )
     assert V0FilterDetector().detect(stack.with_valid_mask(mask)) == []
+
+
+def test_projected_stack_exports_wgs84_geometry_and_metric_area():
+    source = synthetic_stack()
+    transformer = Transformer.from_crs("EPSG:4326", "EPSG:32721", always_xy=True)
+    x_projected = [transformer.transform(float(lon), -7.0)[0] for lon in source.coherence.x]
+    y_projected = [transformer.transform(-55.0, float(lat))[1] for lat in source.coherence.y]
+    projected_ds = source.dataset.assign_coords(x=x_projected, y=y_projected)
+    projected_ds.attrs["crs"] = "EPSG:32721"
+
+    detections = V0FilterDetector().detect(CoherenceStack(projected_ds, source.aoi))
+    assert len(detections) == 1
+    centroid = shape(detections[0].geometry).centroid
+    assert -55.005 < centroid.x < -54.995
+    assert -7.005 < centroid.y < -6.995
+    assert detections[0].area_ha is not None and detections[0].area_ha > 0
+
+
+def test_detector_thresholds_are_loaded_from_config():
+    detector = build_detector(
+        "v0-filters",
+        {"filters": {"min_cluster_pixels": 10_000}},
+    )
+    assert detector.detect(synthetic_stack()) == []

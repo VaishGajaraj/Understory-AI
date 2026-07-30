@@ -3,9 +3,18 @@
 # transcribed into the label library (see packages/understory-labels).
 name: amazon-para
 aoi: aoi.yaml
-start: "2026-01-01"
-end: "2026-07-01"
+start: "2026-06-17"
+end: "2026-12-31"
 detector: v0-filters
+detector_config:
+  baseline:
+    window_pairs: 8
+    min_history_pairs: 4
+    anomaly_sigma: 3.0
+  filters:
+    min_persistence_pairs: 2
+    min_cluster_pixels: 12
+    min_linearity: 0.0
 labels: ../../packages/understory-labels/data/events/amazon-para-imazon.geojson
-stack_store: data/scratch/amazon-para.zarr
+stack_store: ../../data/scratch/amazon-para.zarr
 report_out: reports/amazon-para.json

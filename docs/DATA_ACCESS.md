@@ -13,11 +13,19 @@ NISAR L2 products are free and public, distributed by the Alaska Satellite Facil
 
 **Run in-region.** The archive is hundreds of terabytes; the pipeline is designed for direct S3 access from a VM in us-west-2, streaming only the coherence layer out of each granule. A download-based workflow punishes every experiment — use it only for spot checks. v0 retrieves full granules into a local content-addressed cache (`scripts/build_stack.py`); S3 range reads remain the production target.
 
-**Calibration tiers.** Prefer `validated` (`NISAR_L2_GUNW_V1`) when coverage exists; `beta` / `provisional` results carry the mandatory re-validation caveat in [`METHODOLOGY.md`](METHODOLOGY.md). Probe with:
+**Maturity tiers.** Use `provisional` (`NISAR_L2_GUNW_PROVISIONAL_V1`) for current engineering runs and re-run final results on `validated` (`NISAR_L2_GUNW_V1`) when coverage exists. Do not combine BETA and PROVISIONAL observations in one time series because processor changes can resemble landscape change. Probe with:
 
 ```bash
-uv run python scripts/probe_archive.py benchmarks/amazon-para/aoi.yaml
+uv run python scripts/probe_archive.py benchmarks/amazon-para/aoi.yaml --tier provisional
 uv run python scripts/probe_archive.py benchmarks/amazon-para/aoi.yaml --tier validated
+```
+
+Build one explicitly selected 20 m series after choosing a covered frame from the probe output:
+
+```bash
+uv run python scripts/build_stack.py benchmarks/amazon-para/aoi.yaml \
+  --tier provisional --resolution-m 20 --polarization HH \
+  --track <track> --frame <frame> --out data/scratch/amazon-para.zarr
 ```
 
 ## Auxiliary inputs

@@ -10,7 +10,7 @@ from understory_core.aoi import AreaOfInterest
 from understory_core.discovery import GunwPair
 from understory_core.stack import CoherenceStack
 
-GRID_GROUP = "science/LSAR/GUNW/grids/frequencyA/unwrappedInterferogram"
+GRID_GROUP = "science/LSAR/GUNW/grids/frequencyA/wrappedInterferogram"
 
 
 def make_geographic_gunw(
@@ -100,6 +100,9 @@ def test_build_stacks_pairs_by_midpoint(tmp_path, aoi):
     assert stack.coherence.sizes["x"] < n_cols
     assert stack.coherence.sizes["y"] < n_rows
     assert stack.dataset.attrs["calibration_tiers"] == "beta"
+    assert stack.dataset.attrs["resolution_m"] == 20
+    assert stack.dataset.attrs["polarization"] == "HH"
+    assert stack.dataset.attrs["granule_ids"] == ["pair-0", "pair-1", "pair-2"]
     # reopen path works
     reopened = CoherenceStack.open(store, aoi)
     assert reopened.coherence.shape == stack.coherence.shape

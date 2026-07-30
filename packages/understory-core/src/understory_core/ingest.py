@@ -44,15 +44,26 @@ PROJECTION = "projection"
 def extract_coherence(
     source: GunwPair | str | Path,
     cache_dir: Path | None = None,
+    *,
+    resolution_m: int = 20,
+    polarization: str = "HH",
+    frequency: str = "frequencyA",
 ) -> xr.DataArray:
     """Return the geocoded coherence raster for one GUNW granule.
 
     ``source`` may be a GunwPair (fetched via its HTTPS URL into ``cache_dir``)
     or a path to an already-local HDF5 file.
 
-    Output: 2-D DataArray (y, x) named ``coherence``, float32 in [0, 1], with
-    ``crs`` (EPSG string) and pair metadata attached as attrs.
+    ``resolution_m`` selects the delivered GUNW coherence grid deliberately:
+    20 m lives with the wrapped interferogram; 80 m lives with the unwrapped
+    interferogram. Output is a 2-D DataArray (y, x) named ``coherence``,
+    float32 in [0, 1], with CRS, layer identity, and pair metadata attached.
     """
+    if resolution_m not in (20, 80):
+        raise ValueError(f"resolution_m must be 20 or 80, got {resolution_m}")
+    polarization = polarization.upper()
+    if polarization not in ("HH", "VV"):
+        raise ValueError(f"polarization must be HH or VV, got {polarization}")
     if isinstance(source, GunwPair):
         path = fetch_granule(source, cache_dir or Path("data/scratch/granules"))
         attrs = {
@@ -68,7 +79,12 @@ def extract_coherence(
         attrs = {"granule_id": path.stem}
 
     with h5py.File(path, "r") as h5:
-        dataset_path = _find_coherence_dataset(h5)
+        dataset_path = _find_coherence_dataset(
+            h5,
+            resolution_m=resolution_m,
+            polarization=polarization,
+            frequency=frequency,
+        )
         values = _read(h5[dataset_path]).astype(np.float32)
         x, y = _find_coordinates(h5, dataset_path, values.shape)
         epsg = _find_epsg(h5, dataset_path)
@@ -78,7 +94,14 @@ def extract_coherence(
         dims=("y", "x"),
         coords={"y": y, "x": x},
         name="coherence",
-        attrs={**attrs, "crs": f"EPSG:{epsg}" if epsg else "unknown", "source_path": dataset_path},
+        attrs={
+            **attrs,
+            "crs": f"EPSG:{epsg}" if epsg else "unknown",
+            "source_path": dataset_path,
+            "resolution_m": resolution_m,
+            "polarization": polarization,
+            "frequency": frequency,
+        },
     )
     return da
 
@@ -113,8 +136,19 @@ def fetch_granule(pair: GunwPair, cache_dir: Path) -> Path:
     return target
 
 
-def _find_coherence_dataset(h5: h5py.File) -> str:
-    """Locate the coherence dataset, preferring the unwrapped-interferogram one."""
+def _find_coherence_dataset(
+    h5: h5py.File,
+    *,
+    resolution_m: int,
+    polarization: str,
+    frequency: str,
+) -> str:
+    """Locate one exact delivered GUNW coherence layer.
+
+    Product trees contain multiple datasets with the same leaf name. Selection
+    must be explicit because silently choosing the 80 m layer changes the
+    minimum detectable event size by 16x in pixel area.
+    """
     candidates: list[str] = []
 
     def visit(name: str, obj) -> None:
@@ -127,8 +161,21 @@ def _find_coherence_dataset(h5: h5py.File) -> str:
             f"no '{COHERENCE_DATASET}' dataset found — not a GUNW product, or the "
             "product tree changed (record the new layout in docs/ARCHIVE_STATUS.md)"
         )
-    unwrapped = [c for c in candidates if "nwrapped" in c]
-    return (unwrapped or candidates)[0]
+    interferogram_group = "wrappedInterferogram" if resolution_m == 20 else "unwrappedInterferogram"
+    selected = [
+        path
+        for path in candidates
+        if f"/{frequency}/" in f"/{path}"
+        and f"/{interferogram_group}/" in f"/{path}"
+        and f"/{polarization}/" in f"/{path}"
+    ]
+    if len(selected) != 1:
+        available = ", ".join(sorted(candidates))
+        raise KeyError(
+            f"expected exactly one {resolution_m} m {frequency}/{polarization} "
+            f"'{COHERENCE_DATASET}' dataset, found {len(selected)}; available: {available}"
+        )
+    return selected[0]
 
 
 def _find_coordinates(

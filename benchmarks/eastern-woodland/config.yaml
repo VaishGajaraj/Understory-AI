@@ -6,6 +6,15 @@ aoi: aoi.yaml
 start: "2026-07-01"
 end: "2026-12-31"
 detector: v0-filters
+detector_config:
+  baseline:
+    window_pairs: 8
+    min_history_pairs: 4
+    anomaly_sigma: 3.0
+  filters:
+    min_persistence_pairs: 2
+    min_cluster_pixels: 12
+    min_linearity: 0.0
 labels: ../../packages/understory-labels/data/events/eastern-woodland-controlled.geojson
-stack_store: data/scratch/eastern-woodland.zarr
+stack_store: ../../data/scratch/eastern-woodland.zarr
 report_out: reports/eastern-woodland.json

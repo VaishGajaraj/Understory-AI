@@ -47,6 +47,14 @@ class CoherenceStack:
             return self.dataset["valid"]
         return None
 
+    @property
+    def crs(self) -> str:
+        """Canonical CRS of the raster grid."""
+        crs = str(self.dataset.attrs.get("crs", self.coherence.attrs.get("crs", "unknown")))
+        if crs == "unknown" and _coords_look_geographic(self.coherence):
+            return "EPSG:4326"
+        return crs
+
     def with_valid_mask(self, mask: xr.DataArray) -> CoherenceStack:
         """Return a copy carrying a (y, x) validity mask aligned to the grid."""
         aligned = mask.astype(bool)
@@ -65,6 +73,9 @@ class CoherenceStack:
         store: Path | str,
         *,
         cache_dir: Path | str | None = None,
+        resolution_m: int = 20,
+        polarization: str = "HH",
+        frequency: str = "frequencyA",
     ) -> CoherenceStack:
         """Extract coherence for each pair, clip to the AOI, align on a common
         grid, and stack along time (indexed by pair midpoint date).
@@ -88,7 +99,13 @@ class CoherenceStack:
         layers: list[xr.DataArray] = []
         for pair in ordered:
             logger.info("extracting %s", pair.granule_id)
-            da = extract_coherence(pair, cache_dir=cache)
+            da = extract_coherence(
+                pair,
+                cache_dir=cache,
+                resolution_m=resolution_m,
+                polarization=polarization,
+                frequency=frequency,
+            )
             clipped = _clip_to_aoi(da, aoi)
             timed = clipped.expand_dims(time=[pd.Timestamp(pair.midpoint)])
             timed.attrs.update(clipped.attrs)
@@ -110,6 +127,10 @@ class CoherenceStack:
                 "calibration_tiers": ",".join(tiers),
                 "n_pairs": len(ordered),
                 "crs": reference.attrs.get("crs", "unknown"),
+                "resolution_m": resolution_m,
+                "polarization": polarization.upper(),
+                "frequency": frequency,
+                "granule_ids": [pair.granule_id for pair in ordered],
             }
         )
 

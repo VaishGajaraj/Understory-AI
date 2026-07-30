@@ -15,6 +15,7 @@ def render_markdown(report: dict[str, Any]) -> str:
         f"# Benchmark report: {report.get('benchmark', '?')}",
         "",
         f"- Detector: `{report.get('detector')} {report.get('detector_version')}`",
+        f"- Detector config: `{report.get('detector_config', {})}`",
         f"- Labels: `{report.get('labels_version')}`",
         f"- Methodology: `{report.get('methodology_version')}`",
         "",
@@ -87,8 +88,8 @@ def render_markdown(report: dict[str, Any]) -> str:
     lines += [
         "---",
         "",
-        "Pre-calibration NISAR numbers are never final. Re-validate on the "
-        "calibrated (`NISAR_L2_GUNW_V1`) stream before treating any figure as published.",
+        "PROVISIONAL NISAR results are exploratory until re-validated on the fully validated "
+        "(`NISAR_L2_GUNW_V1`) reprocessing stream.",
         "",
     ]
     return "\n".join(lines)

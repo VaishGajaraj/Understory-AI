@@ -13,7 +13,9 @@ from datetime import datetime
 
 import numpy as np
 import xarray as xr
+from pyproj import CRS, Transformer
 from shapely.geometry import MultiPoint, mapping
+from shapely.ops import transform as shapely_transform
 
 from understory_detect.filters import label_components, linearity_score
 
@@ -26,6 +28,7 @@ def extract_events(
     deficit: xr.DataArray,
     *,
     id_prefix: str,
+    crs: str = "EPSG:4326",
 ) -> list[dict]:
     """Return one event dict per spatially connected group of surviving pixels.
 
@@ -40,10 +43,10 @@ def extract_events(
     if n_components == 0:
         return []
 
-    lons = surviving["x"].values
-    lats = surviving["y"].values
+    xs_coord = surviving["x"].values
+    ys_coord = surviving["y"].values
     times = surviving["time"].values
-    pixel_area_ha = _pixel_area_ha(lons, lats)
+    pixel_area_ha = _pixel_area_ha(xs_coord, ys_coord, crs)
 
     events: list[dict] = []
     for component in range(1, n_components + 1):
@@ -58,10 +61,12 @@ def extract_events(
         depths = deficit.values[:, ys, xs][step_hits]
         mean_deficit = float(np.nanmean(depths)) if depths.size else 0.0
 
-        hull = MultiPoint([(lons[x], lats[y]) for y, x in zip(ys, xs, strict=True)]).convex_hull
+        hull = MultiPoint(
+            [(xs_coord[x], ys_coord[y]) for y, x in zip(ys, xs, strict=True)]
+        ).convex_hull
         # Buffer by half a pixel so single-line features still have area.
-        half_pixel = abs(lons[1] - lons[0]) / 2
-        geometry = hull.buffer(half_pixel)
+        half_pixel = max(abs(xs_coord[1] - xs_coord[0]), abs(ys_coord[1] - ys_coord[0])) / 2
+        geometry = _to_wgs84(hull.buffer(half_pixel), crs)
 
         events.append(
             {
@@ -78,12 +83,26 @@ def extract_events(
     return sorted(events, key=lambda e: -e["score"])
 
 
-def _pixel_area_ha(lons: np.ndarray, lats: np.ndarray) -> float:
-    """Approximate pixel area in hectares from lon/lat spacing."""
-    mid_lat = math.radians(float(np.mean(lats)))
-    dx_m = abs(lons[1] - lons[0]) * 111_320 * math.cos(mid_lat)
-    dy_m = abs(lats[1] - lats[0]) * 110_540
+def _pixel_area_ha(xs: np.ndarray, ys: np.ndarray, crs: str) -> float:
+    """Pixel area in hectares, respecting geographic or projected grid units."""
+    parsed = CRS.from_user_input(crs)
+    if parsed.is_geographic:
+        mid_lat = math.radians(float(np.mean(ys)))
+        dx_m = abs(xs[1] - xs[0]) * 111_320 * math.cos(mid_lat)
+        dy_m = abs(ys[1] - ys[0]) * 110_540
+    else:
+        unit_to_m = parsed.axis_info[0].unit_conversion_factor if parsed.axis_info else 1.0
+        dx_m = abs(xs[1] - xs[0]) * unit_to_m
+        dy_m = abs(ys[1] - ys[0]) * unit_to_m
     return dx_m * dy_m / 10_000
+
+
+def _to_wgs84(geometry, crs: str):
+    parsed = CRS.from_user_input(crs)
+    if parsed == CRS.from_epsg(4326):
+        return geometry
+    transformer = Transformer.from_crs(parsed, "EPSG:4326", always_xy=True)
+    return shapely_transform(transformer.transform, geometry)
 
 
 def _to_datetime(value) -> datetime:

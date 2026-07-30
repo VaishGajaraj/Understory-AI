@@ -38,7 +38,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("aoi", type=Path, help="Path to an AOI yaml")
     parser.add_argument("--out", type=Path, required=True, help="Output Zarr store path")
-    parser.add_argument("--tier", default="beta", choices=sorted(GUNW_COLLECTIONS))
+    parser.add_argument("--tier", default="provisional", choices=sorted(GUNW_COLLECTIONS))
     parser.add_argument("--start", default="2025-07-01", help="ISO date")
     parser.add_argument("--end", default=str(date.today()), help="ISO date")
     parser.add_argument(
@@ -54,7 +54,23 @@ def main() -> int:
         help="Refuse to build if the longest frame series is shorter than this "
         "(baseline needs history; default matches BaselineConfig.min_history_pairs)",
     )
+    parser.add_argument(
+        "--track", type=int, help="Freeze one NISAR track instead of auto-selecting"
+    )
+    parser.add_argument(
+        "--frame", type=int, help="Freeze one NISAR frame instead of auto-selecting"
+    )
+    parser.add_argument(
+        "--direction",
+        choices=("ASCENDING", "DESCENDING"),
+        help="Optional direction when selecting a track/frame",
+    )
+    parser.add_argument("--resolution-m", type=int, choices=(20, 80), default=20)
+    parser.add_argument("--polarization", choices=("HH", "VV"), default="HH")
     args = parser.parse_args()
+
+    if (args.track is None) != (args.frame is None):
+        parser.error("--track and --frame must be provided together")
 
     aoi = AreaOfInterest.from_yaml(args.aoi)
     pairs = search_gunw_pairs(
@@ -76,7 +92,28 @@ def main() -> int:
         )
         return 2
 
-    frame_key, frame_pairs = max(grouped.items(), key=lambda kv: len(kv[1]))
+    if args.track is not None:
+        matches = [
+            (key, value)
+            for key, value in grouped.items()
+            if key[0] == args.track
+            and key[1] == args.frame
+            and (args.direction is None or key[2] == args.direction)
+        ]
+        if len(matches) != 1:
+            available = ", ".join(str(key) for key in sorted(grouped))
+            logger.error(
+                "requested track/frame/direction matched %d series; available: %s",
+                len(matches),
+                available,
+            )
+            return 2
+        frame_key, frame_pairs = matches[0]
+    else:
+        frame_key, frame_pairs = max(grouped.items(), key=lambda kv: len(kv[1]))
+        logger.warning(
+            "auto-selected the longest series; freeze --track/--frame before a benchmark run"
+        )
     track, frame, direction = frame_key
     logger.info(
         "using track %d frame %d %s — %d pairs (%s .. %s)",
@@ -96,7 +133,14 @@ def main() -> int:
         )
         return 2
 
-    stack = CoherenceStack.build(aoi, frame_pairs, args.out, cache_dir=args.cache_dir)
+    stack = CoherenceStack.build(
+        aoi,
+        frame_pairs,
+        args.out,
+        cache_dir=args.cache_dir,
+        resolution_m=args.resolution_m,
+        polarization=args.polarization,
+    )
     coh = stack.coherence
     logger.info(
         "wrote %s  shape=%s  tier(s)=%s",

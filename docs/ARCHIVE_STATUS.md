@@ -1,6 +1,15 @@
 # NISAR archive status — first contact notes
 
-**As of 2026-07-06.** Rerun `scripts/probe_archive.py` over any AOI for the current picture; this file records findings that shaped the code, not a live inventory.
+**As of 2026-07-30.** Rerun `scripts/probe_archive.py` over any AOI for the current picture; this file records findings that shaped the code, not a live inventory.
+
+## Provisional-stream update — 30 July 2026
+
+- The fully calibrated, partially validated `NISAR_L2_GUNW_PROVISIONAL_V1` collection is now searchable for acquisitions beginning 17 June 2026.
+- Pará (`amazon-para`) returns 9 GUNW pairs: 2 are 12-day pairs, but they fall in different frame groups. The longest usable per-frame series is still 1 pair.
+- Eastern woodland returns 6 pairs (1 usable 12-day pair). Amazon mining returns 12 pairs (4 usable), again with only 1 pair per frame group.
+- `NISAR_L2_GUNW_V1` remains empty over Pará. No benchmark AOI yet has the 6 consecutive pairs needed for baseline history plus persistence.
+
+The archive is no longer empty, so one-pair real-data smoke tests are now actionable. A scientific benchmark verdict remains blocked on time-series depth.
 
 ## What the archive actually looks like
 

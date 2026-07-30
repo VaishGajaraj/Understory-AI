@@ -15,11 +15,12 @@ Honest sequencing for the **open** NISAR forest-degradation benchmark. Dates are
 
 ## Now (unblocks a real published number)
 
-1. **Archive watch** — poll Pará / eastern-woodland AOIs with `scripts/probe_archive.py` until a forest frame has ≥6 consecutive 12-day pairs. Track 99 / NW Mexico remains an engineering smoke target only.
-2. **Label transcription** — fill `packages/understory-labels/data/events/amazon-para-imazon.geojson` from published Imazon SAD / IBAMA records (external ground truth). Empty scaffolds are placeholders, not claims.
-3. **First real stack** — `scripts/build_stack.py` + optional `apply_masks.py` over a covered AOI; run `understory-bench`; treat BETA numbers as provisional.
-4. **Calibrated-stream re-validation** — mandatory gate once `NISAR_L2_GUNW_V1` fills ([`METHODOLOGY.md`](METHODOLOGY.md) caveats). Pre-calibration figures are never final.
-5. **Partner loop** — one NGO / territorial program, free watch area, QGIS alerts GeoJSON, confirm/reject feedback into the label library ([`WORKING_OPEN.md`](WORKING_OPEN.md) §8).
+1. **One-pair PROVISIONAL smoke test** — the 30 July probe found current 12-day products in every benchmark AOI. Run one through extraction, clipping, masking, and GeoJSON export to validate real-data correctness without presenting a benchmark result.
+2. **Archive watch** — poll Pará / eastern-woodland AOIs with `scripts/probe_archive.py` until one fixed forest frame has ≥6 consecutive 12-day pairs.
+3. **Label transcription** — fill `packages/understory-labels/data/events/amazon-para-imazon.geojson` from published Imazon SAD / IBAMA records (external ground truth). Empty scaffolds are placeholders, not claims.
+4. **First real stack** — freeze a track/frame and build a 20 m PROVISIONAL stack; apply forest/terrain masks; run `understory-bench`; treat the report as exploratory.
+5. **Validated-stream re-validation** — mandatory gate once `NISAR_L2_GUNW_V1` fills ([`METHODOLOGY.md`](METHODOLOGY.md) caveats).
+6. **Partner loop** — one NGO / territorial program, free watch area, QGIS alerts GeoJSON, confirm/reject feedback into the label library ([`WORKING_OPEN.md`](WORKING_OPEN.md) §8).
 
 ## Next (after first real report)
 

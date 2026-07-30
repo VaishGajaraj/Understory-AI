@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from understory_core.aoi import AreaOfInterest
 from understory_core.stack import CoherenceStack
 from understory_labels import __version__ as labels_version
@@ -24,7 +24,7 @@ from understory_detect.detectors import build_detector
 from understory_detect.report import render_markdown
 from understory_detect.scoring import score
 
-METHODOLOGY_VERSION = "0.1.1"
+METHODOLOGY_VERSION = "0.1.2"
 
 
 class BenchmarkConfig(BaseModel):
@@ -35,6 +35,7 @@ class BenchmarkConfig(BaseModel):
     start: str  # ISO date
     end: str  # ISO date
     detector: str = "v0-filters"
+    detector_config: dict = Field(default_factory=dict)
     labels: str  # path to a label collection (GeoJSON), relative to the config file
     stack_store: str  # path to the coherence stack (Zarr), relative to the config file
     report_out: str  # where to write the report JSON, relative to the config file
@@ -61,7 +62,7 @@ def run_benchmark(config_path: Path) -> dict:
         )
     stack = CoherenceStack.open(store, aoi)
 
-    detector = build_detector(config.detector)
+    detector = build_detector(config.detector, config.detector_config)
     detections = detector.detect(stack)
 
     report = score(
@@ -76,6 +77,7 @@ def run_benchmark(config_path: Path) -> dict:
     verdict = kill_criteria.evaluate(report, synthetic=config.synthetic)
 
     report_dict = report.model_dump(mode="json")
+    report_dict["detector_config"] = detector.config.model_dump(mode="json")
     report_dict["kill_criteria"] = verdict.model_dump(mode="json")
     report_dict["detections"] = [d.model_dump(mode="json") for d in detections]
 
