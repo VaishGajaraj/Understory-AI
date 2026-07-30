@@ -47,6 +47,11 @@ class GunwPair:
     url: str  # HTTPS distribution URL
     s3_url: str | None
     calibration_tier: str  # "beta" | "provisional" | "validated"
+    # Catalog-reported size and checksum, when CMR carries them. Both feed the
+    # integrity check in ingest; both are optional because their presence for
+    # NISAR GUNW is not guaranteed (see pair_from_asf_properties).
+    size_bytes: int | None = None
+    md5: str | None = None
 
     @property
     def temporal_baseline_days(self) -> int:
@@ -92,7 +97,63 @@ def pair_from_asf_properties(properties: dict, tier: str) -> GunwPair:
         url=properties.get("url", ""),
         s3_url=s3_urls[0] if s3_urls else None,
         calibration_tier=tier,
+        size_bytes=_h5_size_bytes(properties),
+        md5=_md5sum(properties),
     )
+
+
+def _h5_size_bytes(properties: dict) -> int | None:
+    """Bytes of the granule's HDF5 file from the CMR record, if reported.
+
+    asf_search's NISARProduct exposes ``bytes`` as ``{filename: {'bytes': int,
+    ...}}`` (one entry per distributed file); the generic path leaves it an int.
+    Both are tolerated, and anything unexpected yields None rather than raising —
+    a missing size just means the length check falls back to Content-Length.
+    """
+    raw = properties.get("bytes")
+    if isinstance(raw, int):
+        return raw
+    if isinstance(raw, dict):
+        h5 = [v for name, v in raw.items() if name.endswith(".h5")]
+        entry = (h5 or list(raw.values()))[0] if raw else None
+        if isinstance(entry, dict) and isinstance(entry.get("bytes"), int):
+            return entry["bytes"]
+    return None
+
+
+def _md5sum(properties: dict) -> str | None:
+    """The catalog MD5 for the granule's HDF5, when the record carries one.
+
+    Settled against the live archive (2026-07-27): CMR **does** publish an MD5
+    per distributed file for NISAR GUNW, in each ``ArchiveAndDistributionInfo``
+    entry's ``Checksum``. asf_search's flat ``md5sum`` property is nonetheless
+    ``None`` for these granules — it is not wired to that field — so reading
+    only ``md5sum`` silently gives up a digest the archive actually publishes,
+    and every download degrades to the honest-but-weaker "fingerprint, not
+    verification" path.
+
+    So both are tried: the flat property first, then the per-file checksum from
+    the UMM record under whichever key asf_search surfaced it. Anything
+    unexpected yields None rather than raising — a missing digest is a weaker
+    guarantee, not an error.
+    """
+    value = properties.get("md5sum")
+    if isinstance(value, str) and value:
+        return value
+
+    for key in ("archiveAndDistributionInformation", "ArchiveAndDistributionInformation"):
+        entries = properties.get(key)
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
+            if not isinstance(entry, dict) or not str(entry.get("Name", "")).endswith(".h5"):
+                continue
+            checksum = entry.get("Checksum")
+            if isinstance(checksum, dict) and str(checksum.get("Algorithm", "")).upper() == "MD5":
+                digest = checksum.get("Value")
+                if isinstance(digest, str) and digest:
+                    return digest
+    return None
 
 
 def search_gunw_pairs(

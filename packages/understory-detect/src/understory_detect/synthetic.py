@@ -23,6 +23,11 @@ import pandas as pd
 import xarray as xr
 from pydantic import BaseModel, Field
 
+# Shared with the detector's own event extraction: identical lon/lat pixel-area
+# math, kept in one place. events.py is the natural home — it is the pipeline
+# path, synthetic is the fixture generator that mirrors it.
+from understory_detect.events import _pixel_area_ha
+
 
 class PlantedDisturbance(BaseModel):
     """One disturbance injected into a synthetic scene."""
@@ -107,7 +112,7 @@ def truth_features(config: SceneConfig) -> list[dict]:
         lon_lo, lon_hi = float(lons[xs.min()]), float(lons[xs.max()])
         lat_lo, lat_hi = float(lats[ys.max()]), float(lats[ys.min()])
         onset = config.start + timedelta(days=12 * disturbance.from_step)
-        area_ha = len(ys) * _pixel_area_ha(lons, lats)
+        area_ha = len(ys) * _pixel_area_ha(lons, lats, "EPSG:4326")
         features.append(
             {
                 "type": "Feature",
@@ -156,15 +161,6 @@ def _footprint(disturbance: PlantedDisturbance, n: int) -> tuple[np.ndarray, np.
     side = np.arange(-half, disturbance.size_px - half)
     yy, xx = np.meshgrid(np.clip(cy + side, 0, n - 1), np.clip(cx + side, 0, n - 1))
     return yy.ravel(), xx.ravel()
-
-
-def _pixel_area_ha(lons: np.ndarray, lats: np.ndarray) -> float:
-    import math
-
-    mid_lat = math.radians(float(np.mean(lats)))
-    dx_m = abs(lons[1] - lons[0]) * 111_320 * math.cos(mid_lat)
-    dy_m = abs(lats[1] - lats[0]) * 110_540
-    return dx_m * dy_m / 10_000
 
 
 # The toy benchmark's scene: one persistent ~2 km road, one transient rain blob.

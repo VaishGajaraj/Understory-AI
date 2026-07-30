@@ -1,0 +1,17 @@
+# CI gate. Small enough to run on a shared runner in ~2 minutes, big enough to
+# catch a regression that would change the capacity story: a memory-model
+# blow-up, a stage that silently upcasts, or a task that starts failing.
+#
+# The absolute capacity numbers from this scenario mean nothing — a GitHub
+# runner is not the deployment target. What it protects is the *shape*: SLOs
+# pass, nothing errors, and peak memory stays proportionate to the input.
+# Capacity claims come from docs/PERFORMANCE.md, measured on real hardware.
+name: ci-smoke
+shape: cycle-burst
+n_aoi: 3
+stack_depth: 12
+posting: coarse
+aoi_side_km: 40.0
+workers: 2
+compression: 1.0e-4
+report_out: reports/ci-smoke.json

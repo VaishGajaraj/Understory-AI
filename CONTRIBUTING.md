@@ -16,12 +16,17 @@ uv sync
 uv run pytest
 uv run ruff check .
 
-# TypeScript
-pnpm install
-pnpm -r build && pnpm -r test
+# TypeScript (Bun workspaces)
+bun install
+bun run lint && bun run typecheck && bun test
+
+# Everything CI runs, in one verb
+make check
 ```
 
 CI runs the full pipeline on a checked-in toy granule — "does it still work" is never a matter of memory. Your PR must keep that green.
+
+It also runs a small load scenario (`make load-test` uses the full one) and re-checks the tiling memory model. Both guard capacity rather than correctness: a change that quietly makes the detector need ten times the memory passes every unit test and breaks every real run. If you touch `understory_detect/baseline.py`, re-run `make measure-memory` — the tile sizer's constant is calibrated by measurement, not derived, and under-budgeting it OOM-kills runs mid-cycle instead of degrading.
 
 ## Contributing a detector
 

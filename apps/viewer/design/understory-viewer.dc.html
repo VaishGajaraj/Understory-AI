@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<style>
+body{margin:0;background:#0a0f0c;color:#e6ece6;font-family:'IBM Plex Sans',sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#6fc48d;text-decoration:none}a:hover{color:#8fd8a8;text-decoration:underline}
+@keyframes pulse{0%,100%{box-shadow:0 0 6px 1px rgba(232,163,61,.55)}50%{box-shadow:0 0 14px 4px rgba(232,163,61,.85)}}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#243027;border-radius:4px}::-webkit-scrollbar-track{background:transparent}
+</style>
+</helmet>
+<div style="display:flex;flex-direction:column;height:100vh;overflow:hidden">
+  <header style="display:flex;align-items:center;gap:20px;padding:0 20px;height:52px;background:#0d130f;border-bottom:1px solid rgba(255,255,255,.08);flex:none">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:22px;height:22px;border-radius:5px;background:linear-gradient(160deg,#2e5c3f,#57b87b);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:#0a0f0c">U</div>
+      <div style="font-weight:600;font-size:15px;letter-spacing:.01em">Understory</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#8fa396;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:4px;padding:2px 7px">amazon-para</div>
+    </div>
+    <nav style="display:flex;gap:4px;margin-left:12px">
+      <button onClick="{{ goAlerts }}" style="{{ tabAlertsStyle }}">Alerts</button>
+      <button onClick="{{ goReport }}" style="{{ tabReportStyle }}">Benchmark report</button>
+    </nav>
+    <div style="flex:1"></div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8fa396">2026-01-01 → 2026-07-01 · NISAR L-band · 12-day repeat</div>
+    <button onClick="{{ exportGeojson }}" style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:500;color:#0a0f0c;background:#57b87b;border:none;border-radius:5px;padding:7px 14px;cursor:pointer" style-hover="background:#6fc48d">↓ Export alerts.geojson</button>
+  </header>
+
+  <sc-if value="{{ isAlerts }}" hint-placeholder-val="{{ true }}">
+  <div style="display:flex;flex:1;min-height:0">
+    <aside style="width:308px;flex:none;display:flex;flex-direction:column;background:#0d130f;border-right:1px solid rgba(255,255,255,.08)">
+      <div style="padding:14px 16px 10px;border-bottom:1px solid rgba(255,255,255,.06)">
+        <div style="display:flex;align-items:baseline;justify-content:space-between">
+          <div style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#8fa396">Triage queue</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8fa396">{{ queueCount }}</div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:10px">
+          <sc-for list="{{ chips }}" as="c" hint-placeholder-count="4">
+            <button onClick="{{ c.onClick }}" style="{{ c.style }}">{{ c.label }} {{ c.n }}</button>
+          </sc-for>
+        </div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:8px">
+        <sc-for list="{{ queue }}" as="d" hint-placeholder-count="6">
+          <div onClick="{{ d.select }}" style="{{ d.rowStyle }}">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="{{ d.dotStyle }}"></div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;color:#e6ece6">{{ d.id }}</div>
+              <div style="flex:1"></div>
+              <div style="{{ d.scoreStyle }}">{{ d.scoreLabel }}</div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#8fa396">
+              <span>{{ d.areaHa }} ha</span><span>{{ d.persistencePasses }} passes</span><span>first {{ d.firstSeenShort }}</span>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:6px;align-items:center">
+              <span style="{{ d.statusPill }}">{{ d.statusLabel }}</span>
+              <sc-if value="{{ d.matchLabel }}" hint-placeholder-val="{{ false }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6fc48d">⌖ {{ d.matchLabel }}</span></sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="padding:10px 16px;border-top:1px solid rgba(255,255,255,.06);font-family:'IBM Plex Mono',monospace;font-size:10px;color:#5f6f64;line-height:1.5">Scores are calibrated: of alerts at ~0.8, ~80% should confirm. Overconfidence is a defect.</div>
+    </aside>
+
+    <main style="flex:1;position:relative;min-width:0;background:#0c1410;overflow:hidden">
+      <div ref="{{ mapRef }}" style="position:absolute;inset:0"></div>
+      <div style="position:absolute;left:14px;top:12px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c9d4cb;background:rgba(10,15,12,.7);border-radius:4px;padding:3px 8px;pointer-events:none">AOI amazon-para — BR-163 corridor, Novo Progresso, Pará</div>
+      <div style="position:absolute;left:14px;bottom:14px;background:rgba(10,15,12,.85);border:1px solid rgba(255,255,255,.09);border-radius:7px;padding:11px 14px;backdrop-filter:blur(4px)">
+        <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#8fa396;margin-bottom:8px">Layers</div>
+        <div style="display:flex;flex-direction:column;gap:7px;font-family:'IBM Plex Mono',monospace;font-size:10.5px">
+          <div style="display:flex;align-items:center;gap:7px;color:#c9d4cb"><span style="width:9px;height:9px;border-radius:2px;background:#e8a33d;box-shadow:0 0 6px rgba(232,163,61,.7)"></span>Detection (coherence anomaly)</div>
+          <div onClick="{{ toggleLabels }}" style="display:flex;align-items:center;gap:7px;cursor:pointer;color:{{ labelLayerColor }}"><span style="width:9px;height:9px;border-radius:2px;border:1.5px dashed #57b87b"></span>Ground-truth label · {{ labelsOnLabel }}</div>
+        </div>
+      </div>
+    </main>
+
+    <aside style="width:340px;flex:none;display:flex;flex-direction:column;background:#0d130f;border-left:1px solid rgba(255,255,255,.08);overflow-y:auto">
+      <sc-if value="{{ hasSel }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:16px 18px 12px;border-bottom:1px solid rgba(255,255,255,.06)">
+          <div style="display:flex;align-items:center;gap:9px">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600">{{ sel.id }}</div>
+            <span style="{{ sel.statusPill }}">{{ sel.statusLabel }}</span>
+          </div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#8fa396;margin-top:5px">{{ sel.lonlat }} · first seen {{ sel.firstSeen }} · last {{ sel.lastSeen }}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06)">
+          <div style="background:#0d130f;padding:12px 18px"><div style="font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#8fa396">Score</div><div style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;color:{{ sel.scoreColor }}">{{ sel.scoreLabel }}</div></div>
+          <div style="background:#0d130f;padding:12px 18px"><div style="font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#8fa396">Area</div><div style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600">{{ sel.areaHa }}<span style="font-size:12px;color:#8fa396"> ha</span></div></div>
+          <div style="background:#0d130f;padding:12px 18px"><div style="font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#8fa396">Persistence</div><div style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600">{{ sel.persistencePasses }}<span style="font-size:12px;color:#8fa396"> passes</span></div></div>
+          <div style="background:#0d130f;padding:12px 18px"><div style="font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#8fa396">Linearity</div><div style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600">{{ sel.linearity }}</div><div style="font-size:10px;color:#5f6f64">{{ sel.shapeHint }}</div></div>
+        </div>
+        <div style="padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.06)">
+          <div style="font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#8fa396;margin-bottom:10px">Coherence · consecutive-pass pairs</div>
+          <svg viewBox="0 0 240 84" style="width:100%;display:block">
+            <rect x="10" y="{{ sel.bandY }}" width="220" height="{{ sel.bandH }}" fill="rgba(87,184,123,.10)"></rect>
+            <line x1="10" y1="{{ sel.threshY }}" x2="230" y2="{{ sel.threshY }}" stroke="rgba(232,163,61,.5)" stroke-width="1" stroke-dasharray="4 3"></line>
+            <polyline points="{{ sel.sparkPts }}" fill="none" stroke="#6fc48d" stroke-width="1.8" stroke-linejoin="round"></polyline>
+            <circle cx="{{ sel.evX }}" cy="{{ sel.evY }}" r="3.4" fill="#e8a33d"></circle>
+          </svg>
+          <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#5f6f64;margin-top:4px"><span>{{ sel.seriesStart }}</span><span style="color:#e8a33d">▬ −3σ threshold · ▉ baseline ±σ</span><span>{{ sel.seriesEnd }}</span></div>
+        </div>
+        <div style="padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.06)">
+          <div style="font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#8fa396;margin-bottom:10px">Ground truth</div>
+          <sc-if value="{{ sel.hasMatch }}" hint-placeholder-val="{{ true }}">
+            <div style="border:1px solid rgba(111,196,141,.3);background:rgba(87,184,123,.06);border-radius:7px;padding:11px 13px">
+              <div style="display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;color:#6fc48d">⌖ {{ sel.match.id }}<span style="font-size:10px;color:#8fa396;font-weight:400">{{ sel.match.cls }}</span></div>
+              <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin-top:9px;font-size:11px;color:#c9d4cb">
+                <span style="color:#8fa396">evidence</span><span>{{ sel.match.evidence }}</span>
+                <span style="color:#8fa396">event window</span><span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">{{ sel.match.window }}</span>
+                <span style="color:#8fa396">centroid Δ</span><span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">{{ sel.match.dist }} m</span>
+                <span style="color:#8fa396">lead vs optical</span><span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#6fc48d">{{ sel.match.lead }}</span>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ sel.noMatch }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px dashed rgba(255,255,255,.15);border-radius:7px;padding:11px 13px;font-size:11.5px;color:#8fa396;line-height:1.5">No matching label within 500 m / ±36 d. Unverified — confirm only with independent evidence (optical, field, enforcement record).</div>
+          </sc-if>
+        </div>
+        <div style="padding:16px 18px">
+          <div style="font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#8fa396;margin-bottom:10px">Triage</div>
+          <div style="display:flex;gap:8px">
+            <button onClick="{{ sel.confirm }}" style="{{ sel.confirmStyle }}">✓ Confirm</button>
+            <button onClick="{{ sel.reject }}" style="{{ sel.rejectStyle }}">✕ Reject</button>
+          </div>
+          <div style="font-size:10.5px;color:#5f6f64;line-height:1.55;margin-top:10px">Rejections feed the label library as verified natural decorrelation — exactly what the detector must learn not to fire on.</div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ noSel }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:40px 24px;color:#5f6f64;font-size:12px;text-align:center">Select a detection from the queue or map.</div>
+      </sc-if>
+    </aside>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isReport }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;overflow-y:auto;min-height:0">
+    <div style="max-width:980px;margin:0 auto;padding:32px 32px 56px">
+      <div style="display:flex;align-items:center;gap:14px;border:1px solid rgba(111,196,141,.35);background:linear-gradient(90deg,rgba(87,184,123,.10),rgba(87,184,123,.03));border-radius:9px;padding:16px 20px">
+        <div style="width:10px;height:10px;border-radius:50%;background:#57b87b;box-shadow:0 0 10px rgba(87,184,123,.8)"></div>
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;color:#6fc48d;letter-spacing:.04em">VERDICT: THESIS ALIVE</div>
+          <div style="font-size:11.5px;color:#8fa396;margin-top:3px">No kill condition met · 1 criterion lacks data — unknown is not dead. Pre-calibration NISAR stream: re-validation on calibrated data is a mandatory gate.</div>
+        </div>
+        <div style="flex:1"></div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#8fa396;text-align:right;line-height:1.7">run 2026-07-02T04:31Z<br>detector v0-filters · labels v0.3.0 · methodology v0.1.0</div>
+      </div>
+
+      <div style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#8fa396;margin:28px 0 12px">Kill criteria — stated before building</div>
+      <div style="display:flex;flex-direction:column;gap:1px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.07);border-radius:8px;overflow:hidden">
+        <div style="display:grid;grid-template-columns:1fr 150px 150px 110px;gap:0;background:#0d130f;padding:13px 18px;align-items:center">
+          <div><div style="font-size:13px;font-weight:500">Event precision vs external ground truth</div><div style="font-size:10.5px;color:#5f6f64;margin-top:2px">Imazon SAD + IBAMA records; rejected labels count as false positives</div></div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8fa396">≥ 0.70</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600">0.78</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;color:#57b87b;background:rgba(87,184,123,.12);border-radius:4px;padding:4px 0;text-align:center">PASS</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 150px 150px 110px;background:#0d130f;padding:13px 18px;align-items:center">
+          <div><div style="font-size:13px;font-weight:500">Minimum detectable event size</div><div style="font-size:10.5px;color:#5f6f64;margin-top:2px">No confirmed labels ≤ 2 ha in current library — cannot be evaluated yet</div></div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8fa396">≤ 2 ha</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600">smallest hit 3.4 ha</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:#e8a33d;background:rgba(232,163,61,.10);border-radius:4px;padding:4px 0;text-align:center">INSUFF. DATA</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 150px 150px 110px;background:#0d130f;padding:13px 18px;align-items:center">
+          <div><div style="font-size:13px;font-weight:500">Median detection lead over optical alerts</div><div style="font-size:10.5px;color:#5f6f64;margin-top:2px">GLAD / RADD / DETER first-alert dates, cloudy-season tropics</div></div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8fa396">≥ 21 days</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600">26 days</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;color:#57b87b;background:rgba(87,184,123,.12);border-radius:4px;padding:4px 0;text-align:center">PASS</div>
+        </div>
+      </div>
+
+      <div style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#8fa396;margin:28px 0 12px">Event-level metrics</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px">
+        <div style="background:#0d130f;border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:14px 16px"><div style="font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#8fa396">Precision</div><div style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;margin-top:4px">0.78</div><div style="font-size:10px;color:#5f6f64">14 / 18 matched</div></div>
+        <div style="background:#0d130f;border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:14px 16px"><div style="font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#8fa396">Recall</div><div style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;margin-top:4px">0.64</div><div style="font-size:10px;color:#5f6f64">14 / 22 confirmed</div></div>
+        <div style="background:#0d130f;border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:14px 16px"><div style="font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#8fa396">F1</div><div style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;margin-top:4px">0.70</div><div style="font-size:10px;color:#5f6f64">event-level, 1:1 greedy</div></div>
+        <div style="background:#0d130f;border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:14px 16px"><div style="font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#8fa396">Median latency</div><div style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;margin-top:4px">9<span style="font-size:12px;color:#8fa396"> d</span></div><div style="font-size:10px;color:#5f6f64">12-d revisit is the floor</div></div>
+        <div style="background:#0d130f;border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:14px 16px"><div style="font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#8fa396">Lead vs optical</div><div style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;margin-top:4px;color:#6fc48d">+26<span style="font-size:12px;color:#8fa396"> d</span></div><div style="font-size:10px;color:#5f6f64">n=11 with optical dates</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:28px">
+        <div>
+          <div style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#8fa396;margin-bottom:12px">Confidence calibration</div>
+          <div style="background:#0d130f;border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:14px 16px">
+            <div style="display:grid;grid-template-columns:70px 34px 1fr 56px;gap:6px 10px;font-family:'IBM Plex Mono',monospace;font-size:11px;align-items:center">
+              <div style="color:#5f6f64;font-size:9.5px">SCORE BIN</div><div style="color:#5f6f64;font-size:9.5px">N</div><div style="color:#5f6f64;font-size:9.5px">CONFIRMED RATE</div><div style="color:#5f6f64;font-size:9.5px">EXPECT</div>
+              <div>0.9–1.0</div><div style="color:#8fa396">3</div><div style="height:9px;background:rgba(255,255,255,.05);border-radius:3px"><div style="width:100%;height:100%;background:#57b87b;border-radius:3px"></div></div><div style="color:#8fa396">1.00</div>
+              <div>0.8–0.9</div><div style="color:#8fa396">5</div><div style="height:9px;background:rgba(255,255,255,.05);border-radius:3px"><div style="width:80%;height:100%;background:#57b87b;border-radius:3px"></div></div><div style="color:#8fa396">0.80</div>
+              <div>0.7–0.8</div><div style="color:#8fa396">7</div><div style="height:9px;background:rgba(255,255,255,.05);border-radius:3px"><div style="width:71%;height:100%;background:#57b87b;border-radius:3px"></div></div><div style="color:#8fa396">0.71</div>
+              <div>0.6–0.7</div><div style="color:#8fa396">9</div><div style="height:9px;background:rgba(255,255,255,.05);border-radius:3px"><div style="width:67%;height:100%;background:#6fc48d;border-radius:3px"></div></div><div style="color:#8fa396">0.67</div>
+              <div>0.5–0.6</div><div style="color:#8fa396">11</div><div style="height:9px;background:rgba(255,255,255,.05);border-radius:3px"><div style="width:55%;height:100%;background:#6fc48d;border-radius:3px"></div></div><div style="color:#8fa396">0.55</div>
+              <div>0.4–0.5</div><div style="color:#8fa396">8</div><div style="height:9px;background:rgba(255,255,255,.05);border-radius:3px"><div style="width:38%;height:100%;background:#e8a33d;border-radius:3px"></div></div><div style="color:#8fa396">0.38</div>
+            </div>
+            <div style="font-size:10.5px;color:#5f6f64;margin-top:12px;line-height:1.5">Expected calibration error 0.043. The 0.4–0.5 bin under-confirms — candidate cut-off review queued.</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#8fa396;margin-bottom:12px">Recall by event size</div>
+          <div style="background:#0d130f;border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:14px 16px">
+            <div style="display:flex;align-items:flex-end;gap:14px;height:120px;padding:0 6px">
+              <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;height:100%"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#5f6f64">n/a</div><div style="width:100%;height:4px;background:rgba(255,255,255,.08);border-radius:3px 3px 0 0"></div></div>
+              <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;height:100%"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8fa396">0.44</div><div style="width:100%;height:44%;background:#e8a33d;border-radius:3px 3px 0 0;opacity:.85"></div></div>
+              <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;height:100%"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8fa396">0.71</div><div style="width:100%;height:71%;background:#6fc48d;border-radius:3px 3px 0 0;opacity:.9"></div></div>
+              <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;height:100%"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8fa396">0.86</div><div style="width:100%;height:86%;background:#57b87b;border-radius:3px 3px 0 0"></div></div>
+            </div>
+            <div style="display:flex;gap:14px;padding:6px 6px 0;font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#5f6f64">
+              <div style="flex:1;text-align:center">≤2 ha<br>0 events</div><div style="flex:1;text-align:center">2–5 ha<br>n=9</div><div style="flex:1;text-align:center">5–10 ha<br>n=7</div><div style="flex:1;text-align:center">&gt;10 ha<br>n=6</div>
+            </div>
+            <div style="font-size:10.5px;color:#5f6f64;margin-top:12px;line-height:1.5">Cluster minimum (12 px) is the binding constraint; first tuning target when controlled-disturbance data arrives.</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#8fa396;margin:28px 0 12px">Run history</div>
+      <div style="display:flex;flex-direction:column;gap:1px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.07);border-radius:8px;overflow:hidden;font-family:'IBM Plex Mono',monospace;font-size:11.5px">
+        <div style="display:grid;grid-template-columns:150px 130px 1fr 90px 90px 130px;background:#0d130f;padding:9px 18px;color:#5f6f64;font-size:9.5px;letter-spacing:.06em">
+          <div>RUN</div><div>BENCHMARK</div><div>DETECTOR · LABELS</div><div>PRECISION</div><div>RECALL</div><div>VERDICT</div>
+        </div>
+        <div style="display:grid;grid-template-columns:150px 130px 1fr 90px 90px 130px;background:#0d130f;padding:11px 18px;align-items:center">
+          <div>2026-07-02</div><div>amazon-para</div><div style="color:#8fa396">v0-filters · labels 0.3.0</div><div>0.78</div><div>0.64</div><div style="color:#57b87b">alive</div>
+        </div>
+        <div style="display:grid;grid-template-columns:150px 130px 1fr 90px 90px 130px;background:#0d130f;padding:11px 18px;align-items:center">
+          <div>2026-06-05</div><div>amazon-para</div><div style="color:#8fa396">v0-filters · labels 0.2.1</div><div>0.71</div><div>0.58</div><div style="color:#57b87b">alive</div>
+        </div>
+        <div style="display:grid;grid-template-columns:150px 130px 1fr 90px 90px 130px;background:#0d130f;padding:11px 18px;align-items:center">
+          <div>2026-05-14</div><div>toy</div><div style="color:#8fa396">v0-filters · fixtures</div><div>1.00</div><div>1.00</div><div style="color:#e8a33d">scaffolding ⚠ synthetic</div>
+        </div>
+      </div>
+      <div style="font-size:10.5px;color:#5f6f64;margin-top:14px;line-height:1.6">Published tables are generated by the scoring harness, never hand-assembled. Synthetic passes are scaffolding, never claims. Full report: <a href="#">reports/amazon-para.json</a> · alerts: <a href="#">amazon-para-alerts.geojson</a></div>
+    </div>
+  </div>
+  </sc-if>
+
+  <footer style="display:flex;align-items:center;gap:18px;padding:0 20px;height:30px;background:#0d130f;border-top:1px solid rgba(255,255,255,.08);font-family:'IBM Plex Mono',monospace;font-size:10px;color:#5f6f64;flex:none">
+    <span>methodology v0.1.0</span><span>labels v0.3.0 · CC-BY 4.0</span><span>detector v0-filters</span>
+    <div style="flex:1"></div>
+    <span style="color:#8fa396">last pass 2026-06-24 · next pass in 8 d</span>
+    <span style="color:#e8a33d">⚠ pre-calibration NISAR stream</span>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showLabels&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Map&quot;},&quot;queueSort&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;score&quot;,&quot;recent&quot;],&quot;default&quot;:&quot;recent&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Triage&quot;}}">
+const AOI = { w: -55.9, e: -54.8, n: -6.6, s: -7.6 };
+const PASSES = ["01-07","01-19","01-31","02-12","02-24","03-08","03-20","04-01","04-13","04-25","05-07","05-19"];
+const LABELS = {
+  "para-np-2026-014": { cls: "access-road", window: "2026-03-28 → 04-14", evidence: "Imazon SAD 2026-04 bulletin", lon: -55.425, lat: -7.175, areaHa: 5.8, status: "confirmed" },
+  "para-np-2026-011": { cls: "mining", window: "2026-02-20 → 03-10", evidence: "IBAMA enforcement action 2026-03", lon: -55.095, lat: -6.845, areaHa: 11.9, status: "confirmed" },
+  "para-np-2026-009": { cls: "clearing", window: "2026-01-15 → 02-05", evidence: "field visit 2026-02-18", lon: -55.66, lat: -6.945, areaHa: 9.4, status: "confirmed" },
+  "para-np-2026-017": { cls: "other (flooding)", window: "2026-04-20 → 05-15", evidence: "verified natural decorrelation — seasonal flooding", lon: -54.875, lat: -6.695, areaHa: 6.1, status: "rejected" },
+  "para-np-2026-013": { cls: "selective-logging", window: "2026-03-05 → 03-30", evidence: "Imazon SAD 2026-03 bulletin", lon: -55.2, lat: -7.3, areaHa: 1.7, status: "confirmed" },
+};
+const DETS = [
+  { id: "det-2026-0412", lon: -55.423, lat: -7.178, score: 0.91, pers: 4, areaHa: 6.2, lin: 0.78, firstSeen: "2026-04-01", lastSeen: "2026-05-07", evIdx: 7, base: 0.63, seed: 3, match: { id: "para-np-2026-014", dist: 210, lead: "+24 d" } },
+  { id: "det-2026-0398", lon: -55.10, lat: -6.85, score: 0.84, pers: 3, areaHa: 12.4, lin: 0.31, firstSeen: "2026-03-08", lastSeen: "2026-04-13", evIdx: 5, base: 0.60, seed: 7, match: { id: "para-np-2026-011", dist: 340, lead: "+19 d" } },
+  { id: "det-2026-0421", lon: -54.95, lat: -7.35, score: 0.77, pers: 2, areaHa: 4.1, lin: 0.66, firstSeen: "2026-04-25", lastSeen: "2026-05-19", evIdx: 9, base: 0.64, seed: 11, match: null },
+  { id: "det-2026-0388", lon: -55.655, lat: -6.948, score: 0.73, pers: 3, areaHa: 8.9, lin: 0.22, firstSeen: "2026-01-31", lastSeen: "2026-03-08", evIdx: 2, base: 0.61, seed: 5, match: { id: "para-np-2026-009", dist: 180, lead: "+31 d" }, status: "confirmed" },
+  { id: "det-2026-0405", lon: -55.30, lat: -7.52, score: 0.68, pers: 2, areaHa: 3.8, lin: 0.71, firstSeen: "2026-03-20", lastSeen: "2026-04-13", evIdx: 6, base: 0.62, seed: 13, match: null },
+  { id: "det-2026-0379", lon: -54.878, lat: -6.70, score: 0.59, pers: 2, areaHa: 5.5, lin: 0.18, firstSeen: "2026-04-25", lastSeen: "2026-05-19", evIdx: 9, base: 0.58, seed: 2, match: { id: "para-np-2026-017", dist: 260, lead: "—" }, status: "rejected" },
+  { id: "det-2026-0418", lon: -55.72, lat: -7.44, score: 0.55, pers: 2, areaHa: 3.9, lin: 0.54, firstSeen: "2026-05-07", lastSeen: "2026-05-31", evIdx: 10, base: 0.63, seed: 17, match: null },
+  { id: "det-2026-0426", lon: -55.05, lat: -7.08, score: 0.48, pers: 2, areaHa: 4.6, lin: 0.42, firstSeen: "2026-05-19", lastSeen: "2026-06-12", evIdx: 10, base: 0.59, seed: 19, match: null },
+  { id: "det-2026-0392", lon: -55.50, lat: -6.78, score: 0.42, pers: 2, areaHa: 7.3, lin: 0.35, firstSeen: "2026-02-24", lastSeen: "2026-03-20", evIdx: 4, base: 0.60, seed: 23, match: null },
+];
+function series(d) {
+  const out = [];
+  for (let i = 0; i < 12; i++) {
+    let v = d.base + Math.sin(i * 1.7 + d.seed) * 0.028 + Math.cos(i * 0.9 + d.seed * 2) * 0.018;
+    if (i >= d.evIdx) v = 0.30 + Math.sin(i * 2.1 + d.seed) * 0.03 + (i - d.evIdx) * 0.008;
+    out.push(Math.max(0.18, Math.min(0.75, v)));
+  }
+  return out;
+}
+const Y = v => 74 - ((v - 0.15) / 0.6) * 62;
+const pill = c => `display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:${c};background:${c}1f;border:1px solid ${c}55;border-radius:4px;padding:2px 7px`;
+const STATUS_COLOR = { candidate: "#e8a33d", confirmed: "#57b87b", rejected: "#c76e5e" };
+
+function sqPoly(lon, lat, areaHa) {
+  const side = Math.sqrt(areaHa * 10000);
+  const dLat = side / 111320 / 2, dLon = side / (111320 * Math.cos(lat * Math.PI / 180)) / 2;
+  return { type: "Polygon", coordinates: [[[lon - dLon, lat - dLat], [lon + dLon, lat - dLat], [lon + dLon, lat + dLat], [lon - dLon, lat + dLat], [lon - dLon, lat - dLat]]] };
+}
+
+class Component extends DCLogic {
+  state = { view: "alerts", selectedId: "det-2026-0412", filter: "all", triage: {} };
+  mapRef = React.createRef();
+  status(d) { return this.state.triage[d.id] || d.status || "candidate"; }
+  labelsVisible() { return this.state.labelsOn ?? (this.props.showLabels ?? true); }
+  componentDidMount() {
+    this._poll = setInterval(() => {
+      if (window.maplibregl && this.mapRef.current && !this.map) { clearInterval(this._poll); this.initMap(); }
+    }, 120);
+  }
+  componentWillUnmount() { clearInterval(this._poll); if (this.map) this.map.remove(); }
+  initMap() {
+    const map = new maplibregl.Map({
+      container: this.mapRef.current,
+      style: {
+        version: 8,
+        sources: { sat: { type: "raster", tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"], tileSize: 256, attribution: "Esri World Imagery" } },
+        layers: [
+          { id: "bg", type: "background", paint: { "background-color": "#0c1410" } },
+          { id: "sat", type: "raster", source: "sat", paint: { "raster-brightness-max": 0.62, "raster-saturation": -0.3, "raster-contrast": 0.08 } },
+        ],
+      },
+      bounds: [[AOI.w, AOI.s], [AOI.e, AOI.n]], fitBoundsOptions: { padding: 36 },
+      attributionControl: { compact: true },
+    });
+    map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-right");
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+    map.on("load", () => {
+      map.addSource("aoi", { type: "geojson", data: { type: "Feature", geometry: { type: "Polygon", coordinates: [[[AOI.w, AOI.s], [AOI.e, AOI.s], [AOI.e, AOI.n], [AOI.w, AOI.n], [AOI.w, AOI.s]]] }, properties: {} } });
+      map.addLayer({ id: "aoi-line", type: "line", source: "aoi", paint: { "line-color": "#6fc48d", "line-width": 1.2, "line-dasharray": [3, 2], "line-opacity": 0.55 } });
+      map.addSource("labels", { type: "geojson", data: this.labelFC() });
+      map.addLayer({ id: "labels-line", type: "line", source: "labels", paint: { "line-color": ["get", "color"], "line-width": 1.6, "line-dasharray": [2.5, 1.8], "line-opacity": 0.85 } });
+      map.addSource("det-pts", { type: "geojson", data: this.detPtsFC() });
+      map.addSource("det-sq", { type: "geojson", data: this.detSqFC() });
+      map.addLayer({ id: "det-glow", type: "circle", source: "det-pts", paint: { "circle-color": ["get", "color"], "circle-blur": 1.1, "circle-opacity": 0.55, "circle-radius": ["get", "glowR"] } });
+      map.addLayer({ id: "det-fill", type: "fill", source: "det-sq", paint: { "fill-color": ["get", "color"], "fill-opacity": 0.75 } });
+      map.addLayer({ id: "det-sel", type: "line", source: "det-sq", filter: ["==", ["get", "id"], this.state.selectedId], paint: { "line-color": "#ffe0a8", "line-width": 2.4 } });
+      map.on("click", "det-fill", e => { const id = e.features && e.features[0] && e.features[0].properties.id; if (id) this.setState({ selectedId: id }); });
+      map.on("mouseenter", "det-fill", () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", "det-fill", () => { map.getCanvas().style.cursor = ""; });
+      const town = document.createElement("div");
+      town.style.cssText = "font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#e8e2cc;text-shadow:0 1px 3px #000;pointer-events:none;white-space:nowrap";
+      town.textContent = "● Novo Progresso";
+      new maplibregl.Marker({ element: town }).setLngLat([-55.431, -7.144]).addTo(map);
+      this._mapReady = true;
+      this.syncMap();
+    });
+    this.map = map;
+  }
+  detColor(d) { return STATUS_COLOR[this.status(d)]; }
+  detPtsFC() {
+    return { type: "FeatureCollection", features: DETS.map(d => ({ type: "Feature", geometry: { type: "Point", coordinates: [d.lon, d.lat] }, properties: { id: d.id, color: this.detColor(d), glowR: Math.round(Math.sqrt(d.areaHa) * 5) } })) };
+  }
+  detSqFC() {
+    return { type: "FeatureCollection", features: DETS.map(d => ({ type: "Feature", geometry: sqPoly(d.lon, d.lat, d.areaHa), properties: { id: d.id, color: this.detColor(d) } })) };
+  }
+  labelFC() {
+    return { type: "FeatureCollection", features: Object.entries(LABELS).map(([id, L]) => ({ type: "Feature", geometry: sqPoly(L.lon, L.lat, L.areaHa * 1.8), properties: { id, color: L.status === "rejected" ? "#c76e5e" : "#57b87b" } })) };
+  }
+  syncMap() {
+    if (!this._mapReady) return;
+    const map = this.map;
+    map.getSource("det-pts").setData(this.detPtsFC());
+    map.getSource("det-sq").setData(this.detSqFC());
+    map.setFilter("det-sel", ["==", ["get", "id"], this.state.selectedId]);
+    const vis = this.labelsVisible() ? "visible" : "none";
+    map.setLayoutProperty("labels-line", "visibility", vis);
+  }
+  componentDidUpdate() { this.syncMap(); }
+  renderVals() {
+    const S = this.state;
+    const showLabels = S.labelsOn ?? (this.props.showLabels ?? true);
+    const sortBy = this.props.queueSort ?? "score";
+    const tab = on => `font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:${on ? 600 : 400};color:${on ? "#e6ece6" : "#8fa396"};background:${on ? "rgba(255,255,255,.07)" : "transparent"};border:none;border-radius:5px;padding:7px 13px;cursor:pointer`;
+    const all = DETS.map(d => {
+      const st = this.status(d);
+      const c = STATUS_COLOR[st];
+      const sel = d.id === S.selectedId;
+      const x = ((d.lon - AOI.w) / (AOI.e - AOI.w)) * 100;
+      const y = ((AOI.n - d.lat) / (AOI.n - AOI.s)) * 100;
+      const sz = Math.round(Math.sqrt(d.areaHa) * 4.5);
+      return {
+        ...d, st, persistencePasses: d.pers, scoreLabel: d.score.toFixed(2),
+        firstSeenShort: d.firstSeen.slice(5), statusLabel: st, statusPill: pill(c),
+        matchLabel: d.match ? d.match.id : null,
+        select: () => this.setState({ selectedId: d.id }),
+        rowStyle: `padding:11px 12px;border-radius:7px;cursor:pointer;border:1px solid ${sel ? "rgba(232,163,61,.5)" : "transparent"};background:${sel ? "rgba(232,163,61,.07)" : "transparent"};margin-bottom:2px`,
+        dotStyle: `width:8px;height:8px;border-radius:2px;background:${c};box-shadow:0 0 5px ${c}99;flex:none`,
+        scoreStyle: `font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:600;color:${d.score >= 0.7 ? "#e8a33d" : "#8fa396"}`,
+        mark: { x, y, sz, sel, c },
+      };
+    });
+    const counts = { all: all.length, candidate: 0, confirmed: 0, rejected: 0 };
+    all.forEach(d => counts[d.st]++);
+    const filtered = all.filter(d => S.filter === "all" || d.st === S.filter);
+    const queue = [...filtered].sort((a, b) => sortBy === "recent" ? b.firstSeen.localeCompare(a.firstSeen) : b.score - a.score);
+    const chips = ["all", "candidate", "confirmed", "rejected"].map(f => ({
+      label: f, n: counts[f], onClick: () => this.setState({ filter: f }),
+      style: `font-family:'IBM Plex Mono',monospace;font-size:10px;color:${S.filter === f ? "#0a0f0c" : "#8fa396"};background:${S.filter === f ? "#8fa396" : "rgba(255,255,255,.05)"};border:1px solid rgba(255,255,255,.1);border-radius:4px;padding:3px 8px;cursor:pointer`,
+    }));
+    const marks = all.map(d => ({
+      id: d.id, select: d.select,
+      style: `position:absolute;left:calc(${d.mark.x}% - ${d.mark.sz / 2}px);top:calc(${d.mark.y}% - ${d.mark.sz / 2}px);width:${d.mark.sz}px;height:${d.mark.sz}px;border-radius:3px;background:${d.mark.c}${d.mark.sel ? "" : "cc"};cursor:pointer;${d.mark.sel ? "animation:pulse 1.6s ease-in-out infinite;outline:2px solid #e8a33d;outline-offset:3px;" : `box-shadow:0 0 8px ${d.mark.c}88;`}z-index:${d.mark.sel ? 5 : 3}`,
+    }));
+    const labelMarks = Object.entries(LABELS).map(([id, L]) => {
+      const x = ((L.lon - AOI.w) / (AOI.e - AOI.w)) * 100;
+      const y = ((AOI.n - L.lat) / (AOI.n - AOI.s)) * 100;
+      const sz = Math.round(Math.sqrt(L.areaHa) * 4.5) + 12;
+      const c = L.status === "rejected" ? "#c76e5e" : "#57b87b";
+      return { tip: `${id} · ${L.cls} · ${L.status}`, style: `position:absolute;left:calc(${x}% - ${sz / 2}px);top:calc(${y}% - ${sz / 2}px);width:${sz}px;height:${sz}px;border:1.5px dashed ${c};border-radius:4px;z-index:2;opacity:.8` };
+    });
+    const raw = DETS.find(d => d.id === S.selectedId);
+    let sel = null;
+    if (raw) {
+      const e = all.find(d => d.id === raw.id);
+      const ser = series(raw);
+      const baseVals = ser.slice(0, Math.max(3, raw.evIdx));
+      const mean = baseVals.reduce((a, b) => a + b, 0) / baseVals.length;
+      const sd = Math.sqrt(baseVals.reduce((a, b) => a + (b - mean) ** 2, 0) / baseVals.length) || 0.02;
+      const pts = ser.map((v, i) => `${10 + i * (220 / 11)},${Y(v).toFixed(1)}`).join(" ");
+      const st = this.status(raw);
+      const btn = (act, active, c) => `flex:1;font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;color:${active ? "#0a0f0c" : c};background:${active ? c : c + "1a"};border:1px solid ${c}66;border-radius:6px;padding:9px 0;cursor:pointer`;
+      const m = raw.match ? { ...raw.match, ...LABELS[raw.match.id] } : null;
+      sel = {
+        ...e, lonlat: `${raw.lat.toFixed(3)}°, ${raw.lon.toFixed(3)}°`,
+        scoreColor: raw.score >= 0.7 ? "#e8a33d" : "#c9d4cb",
+        linearity: raw.lin.toFixed(2), shapeHint: raw.lin >= 0.6 ? "road / trail shaped" : "compact patch",
+        bandY: Y(mean + sd).toFixed(1), bandH: Math.max(2, Y(mean - sd) - Y(mean + sd)).toFixed(1),
+        threshY: Y(mean - 3 * sd).toFixed(1), sparkPts: pts,
+        evX: (10 + raw.evIdx * (220 / 11)).toFixed(1), evY: Y(ser[raw.evIdx]).toFixed(1),
+        seriesStart: "2026-" + PASSES[0], seriesEnd: "2026-" + PASSES[11],
+        hasMatch: !!m, noMatch: !m, match: m,
+        confirm: () => this.setState(s => ({ triage: { ...s.triage, [raw.id]: "confirmed" } })),
+        reject: () => this.setState(s => ({ triage: { ...s.triage, [raw.id]: "rejected" } })),
+        confirmStyle: btn("c", st === "confirmed", "#57b87b"),
+        rejectStyle: btn("r", st === "rejected", "#c76e5e"),
+      };
+    }
+    return {
+      isAlerts: S.view === "alerts", isReport: S.view === "report",
+      goAlerts: () => this.setState({ view: "alerts" }),
+      goReport: () => this.setState({ view: "report" }),
+      tabAlertsStyle: tab(S.view === "alerts"), tabReportStyle: tab(S.view === "report"),
+      mapRef: this.mapRef,
+      queue, queueCount: `${queue.length} shown`, chips, marks, labelMarks,
+      labelsOn: showLabels, labelsOnLabel: showLabels ? "on" : "off",
+      labelLayerColor: showLabels ? "#c9d4cb" : "#5f6f64",
+      toggleLabels: () => this.setState({ labelsOn: !showLabels }),
+      hasSel: !!sel, noSel: !sel, sel: sel || {},
+      exportGeojson: () => {
+        const fc = { type: "FeatureCollection", features: DETS.map(d => ({ type: "Feature", geometry: { type: "Point", coordinates: [d.lon, d.lat] }, properties: { id: d.id, first_seen: d.firstSeen, last_seen: d.lastSeen, score: d.score, persistence_passes: d.pers, area_ha: d.areaHa, status: this.status(d) } })) };
+        const url = URL.createObjectURL(new Blob([JSON.stringify(fc, null, 2)], { type: "application/geo+json" }));
+        const a = document.createElement("a"); a.href = url; a.download = "amazon-para-alerts.geojson"; a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      },
+    };
+  }
+}
+</script>
+</body>
+</html>

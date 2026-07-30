@@ -15,9 +15,12 @@ from pathlib import Path
 
 import h5py
 import numpy as np
+import requests
 import xarray as xr
 
 from understory_core.discovery import GunwPair
+from understory_core.download import DEFAULT_RETRY_POLICY, RetryPolicy, download_file
+from understory_core.manifest import GranuleRecord, IngestManifest, utcnow
 
 logger = logging.getLogger(__name__)
 
@@ -106,34 +109,110 @@ def extract_coherence(
     return da
 
 
-def fetch_granule(pair: GunwPair, cache_dir: Path) -> Path:
-    """Download a granule to the local cache (no-op when already present).
+def fetch_granule(
+    pair: GunwPair,
+    cache_dir: Path,
+    *,
+    manifest: IngestManifest | None = None,
+    policy: RetryPolicy = DEFAULT_RETRY_POLICY,
+    session: requests.Session | None = None,
+) -> Path:
+    """Fetch a granule to the local cache, idempotently and intact.
 
     Uses HTTPS with NASA Earthdata credentials from ~/.netrc (see
-    docs/DATA_ACCESS.md). requests follows the URS redirect dance natively.
+    docs/DATA_ACCESS.md); requests follows the URS redirect dance natively. The
+    download itself (retry, backoff, resume, length/checksum checks) lives in
+    ``understory_core.download``; this function is the cache-and-record layer
+    around it.
+
+    **The cache check is "recorded as complete AND intact", not "a file
+    exists".** A granule is skipped only when the ingest manifest holds a row
+    for it *and* the file that row names is still the right size on disk. That
+    is the whole point of the state store: a bare ``.h5`` left behind by a
+    killed process has no row, so it is re-fetched rather than trusted — closing
+    the hole where ``exists() and st_size > 0`` accepted a truncated download
+    forever. Because the row is keyed on ``granule_id`` and written only after a
+    verified transfer, the same granule shared by several AOIs is downloaded
+    once (see ``fetch_granules`` for deduplicating a whole pair list up front).
     """
+    cache_dir = Path(cache_dir)
     cache_dir.mkdir(parents=True, exist_ok=True)
+    manifest = manifest or IngestManifest.for_cache(cache_dir)
+
+    cached = manifest.intact(pair.granule_id)
+    if cached is not None:
+        return cached
+
     target = cache_dir / f"{pair.granule_id}.h5"
-    if target.exists() and target.stat().st_size > 0:
-        return target
-
-    import requests
-
     logger.info("fetching %s", pair.granule_id)
-    with requests.get(pair.url, stream=True, timeout=120) as response:
-        if response.status_code in (401, 403):
-            raise PermissionError(
-                f"Earthdata authorization failed for {pair.url} — put NASA Earthdata "
-                "credentials in ~/.netrc (machine urs.earthdata.nasa.gov ...); "
-                "see docs/DATA_ACCESS.md"
-            )
-        response.raise_for_status()
-        partial = target.with_suffix(".h5.part")
-        with open(partial, "wb") as f:
-            for chunk in response.iter_content(chunk_size=1 << 20):
-                f.write(chunk)
-        partial.rename(target)
-    return target
+    result = download_file(
+        pair.url,
+        target,
+        expected_bytes=pair.size_bytes,
+        expected_md5=pair.md5,
+        policy=policy,
+        session=session,
+    )
+    manifest.record(
+        GranuleRecord(
+            granule_id=pair.granule_id,
+            calibration_tier=pair.calibration_tier,
+            track=pair.track,
+            frame=pair.frame,
+            reference_start=pair.reference_start,
+            secondary_start=pair.secondary_start,
+            path=result.path,
+            size_bytes=result.size_bytes,
+            md5=result.md5,
+            checksum_verified=result.checksum_verified,
+            completed_at=utcnow(),
+        )
+    )
+    return result.path
+
+
+def fetch_granules(
+    pairs: list[GunwPair],
+    cache_dir: Path,
+    *,
+    manifest: IngestManifest | None = None,
+    policy: RetryPolicy = DEFAULT_RETRY_POLICY,
+    max_workers: int = 1,
+) -> dict[str, Path]:
+    """Fetch every distinct granule in ``pairs`` once, returning id -> path.
+
+    At scale many AOIs share track/frame coverage, so a naive pass would fetch
+    the same granule repeatedly. Deduplicating by ``granule_id`` before fetching
+    collapses that; the manifest then also prevents re-fetching across separate
+    calls and runs. ``max_workers`` bounds concurrency (the download path has no
+    limit of its own); the default is sequential and deterministic, sharing one
+    HTTP session, while a higher count gives each worker its own session and
+    lets the WAL-mode manifest absorb concurrent writes.
+    """
+    cache_dir = Path(cache_dir)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    manifest = manifest or IngestManifest.for_cache(cache_dir)
+    unique: dict[str, GunwPair] = {}
+    for pair in pairs:
+        unique.setdefault(pair.granule_id, pair)
+
+    if max_workers <= 1:
+        with requests.Session() as shared:
+            return {
+                gid: fetch_granule(
+                    pair, cache_dir, manifest=manifest, policy=policy, session=shared
+                )
+                for gid, pair in unique.items()
+            }
+
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures = {
+            gid: pool.submit(fetch_granule, pair, cache_dir, manifest=manifest, policy=policy)
+            for gid, pair in unique.items()
+        }
+        return {gid: future.result() for gid, future in futures.items()}
 
 
 def _find_coherence_dataset(

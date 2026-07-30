@@ -1,15 +1,13 @@
-"""Coherence time-series stack construction.
-
-A CoherenceStack is the central data structure of the whole project: a
-per-pixel time series of 12-day coherence values over an AOI, stored as a
-Zarr-backed xarray Dataset with dims (time, y, x). Everything downstream —
-baselines, detectors, scoring — consumes this.
-"""
+"""Resumable construction of projected NISAR coherence time-series stacks."""
 
 from __future__ import annotations
 
+import json
 import logging
+from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -22,6 +20,11 @@ from understory_core.discovery import GunwPair
 from understory_core.ingest import extract_coherence
 
 logger = logging.getLogger(__name__)
+
+# Pairs in one frame group should share the NISAR SDS fixed grid. A larger
+# offset is a geometry error, not an invitation to silently resample the data.
+GRID_TOLERANCE_FRACTION = 0.01
+DEFAULT_SPATIAL_CHUNK = 512
 
 
 class CoherenceStack:
@@ -38,11 +41,7 @@ class CoherenceStack:
 
     @property
     def valid(self) -> xr.DataArray | None:
-        """Optional (y, x) boolean mask of pixels trusted for detection.
-
-        Present when forest/terrain masks were joined at build time or via
-        ``with_valid_mask``. Detectors skip pixels where this is False.
-        """
+        """Optional (y, x) boolean mask of pixels trusted for detection."""
         if "valid" in self.dataset:
             return self.dataset["valid"]
         return None
@@ -61,9 +60,9 @@ class CoherenceStack:
         if set(aligned.dims) != {"y", "x"}:
             raise ValueError(f"valid mask must be (y, x); got dims {aligned.dims}")
         aligned = aligned.reindex_like(self.coherence.isel(time=0), method=None)
-        ds = self.dataset.copy()
-        ds["valid"] = aligned.fillna(False)
-        return CoherenceStack(ds, self.aoi)
+        dataset = self.dataset.copy()
+        dataset["valid"] = aligned.fillna(False)
+        return CoherenceStack(dataset, self.aoi)
 
     @classmethod
     def build(
@@ -76,57 +75,67 @@ class CoherenceStack:
         resolution_m: int = 20,
         polarization: str = "HH",
         frequency: str = "frequencyA",
+        spatial_chunk: int = DEFAULT_SPATIAL_CHUNK,
     ) -> CoherenceStack:
-        """Extract coherence for each pair, clip to the AOI, align on a common
-        grid, and stack along time (indexed by pair midpoint date).
+        """Build or resume one scientifically frozen coherence stack.
 
-        ``pairs`` must come from a single frame group (see
-        ``discovery.group_by_frame``) — mixing geometries corrupts the
-        per-pixel time series.
+        Pairs must share frame geometry and calibration tier. Each clipped
+        raster is appended independently, bounding peak memory to roughly one
+        granule. A sidecar build marker records the committed prefix so a
+        repeated command is idempotent and an interrupted append is refused
+        rather than trusted.
         """
         if not pairs:
             raise ValueError("CoherenceStack.build requires at least one GUNW pair")
-
-        frame_keys = {p.frame_key for p in pairs}
+        frame_keys = {pair.frame_key for pair in pairs}
         if len(frame_keys) > 1:
             raise ValueError(
                 f"pairs span {len(frame_keys)} frame groups {sorted(frame_keys)}; "
                 "build one stack per frame group (see discovery.group_by_frame)"
             )
-
-        cache = Path(cache_dir) if cache_dir else Path("data/scratch/granules")
-        ordered = sorted(pairs, key=lambda p: p.midpoint)
-        layers: list[xr.DataArray] = []
-        for pair in ordered:
-            logger.info("extracting %s", pair.granule_id)
-            da = extract_coherence(
-                pair,
-                cache_dir=cache,
-                resolution_m=resolution_m,
-                polarization=polarization,
-                frequency=frequency,
+        tiers = {pair.calibration_tier for pair in pairs}
+        if len(tiers) > 1:
+            raise ValueError(
+                f"pairs span calibration tiers {sorted(tiers)}; processor differences between "
+                "tiers can resemble landscape change, so build a separate stack per tier"
             )
-            clipped = _clip_to_aoi(da, aoi)
-            timed = clipped.expand_dims(time=[pd.Timestamp(pair.midpoint)])
-            timed.attrs.update(clipped.attrs)
-            layers.append(timed)
 
-        reference = layers[0]
-        aligned = [reference] + [_match_grid(layer, reference) for layer in layers[1:]]
-        stacked = xr.concat(aligned, dim="time").sortby("time").astype(np.float32)
-        stacked.name = "coherence"
+        ordered = sorted(pairs, key=lambda pair: pair.midpoint)
+        midpoints = cast("list[pd.Timestamp]", [pd.Timestamp(pair.midpoint) for pair in ordered])
+        duplicates = {timestamp for timestamp in midpoints if midpoints.count(timestamp) > 1}
+        if duplicates:
+            raise ValueError(
+                f"pairs share midpoint(s) {sorted(str(value) for value in duplicates)}; "
+                "deduplicate the pair list before building a time series"
+            )
 
-        tiers = sorted({p.calibration_tier for p in ordered})
-        ds = stacked.to_dataset(name="coherence")
-        ds.attrs.update(
+        store_path = Path(store)
+        cache = Path(cache_dir) if cache_dir else Path("data/scratch/granules")
+        frame_key = next(iter(frame_keys))
+        tier = next(iter(tiers))
+        layer = {
+            "resolution_m": resolution_m,
+            "polarization": polarization.upper(),
+            "frequency": frequency,
+        }
+        committed = _resume_point(store_path, midpoints, frame_key, tier, layer)
+        if committed == len(ordered):
+            logger.info("stack already complete at %s (%d timesteps)", store_path, committed)
+            return cls.open(store_path, aoi)
+
+        grid: GridSpec | None = None
+        attrs: dict = {}
+        if committed > 0:
+            grid, attrs = _grid_and_attrs_of(store_path)
+
+        attrs.update(
             {
                 "aoi": aoi.name,
                 "track": ordered[0].track,
                 "frame": ordered[0].frame,
                 "flight_direction": ordered[0].flight_direction,
-                "calibration_tiers": ",".join(tiers),
+                "calibration_tiers": tier,
                 "n_pairs": len(ordered),
-                "crs": reference.attrs.get("crs", "unknown"),
                 "resolution_m": resolution_m,
                 "polarization": polarization.upper(),
                 "frequency": frequency,
@@ -134,10 +143,40 @@ class CoherenceStack:
             }
         )
 
-        store_path = Path(store)
-        store_path.parent.mkdir(parents=True, exist_ok=True)
-        ds.to_zarr(store_path, mode="w")
-        return cls(xr.open_zarr(store_path), aoi)
+        for index in range(committed, len(ordered)):
+            pair = ordered[index]
+            raster = extract_coherence(
+                pair,
+                cache_dir=cache,
+                resolution_m=resolution_m,
+                polarization=polarization,
+                frequency=frequency,
+            )
+            raster = _clip_to_aoi(raster, aoi)
+            if grid is None:
+                grid = GridSpec.of(raster)
+                attrs["crs"] = raster.attrs.get("crs", "unknown")
+            else:
+                raster = _align_to(raster, grid, pair.granule_id)
+
+            step = raster.expand_dims(time=[midpoints[index]]).to_dataset(name="coherence")
+            step = step.chunk({"time": 1, "y": spatial_chunk, "x": spatial_chunk})
+            step.attrs = attrs
+            if index == 0:
+                store_path.parent.mkdir(parents=True, exist_ok=True)
+                step.to_zarr(store_path, mode="w")
+            else:
+                step.to_zarr(store_path, mode="a", append_dim="time")
+            _write_marker(
+                store_path,
+                midpoints[: index + 1],
+                frame_key,
+                tier,
+                layer,
+            )
+            logger.info("stacked %d/%d %s", index + 1, len(ordered), pair.granule_id)
+
+        return cls.open(store_path, aoi)
 
     @classmethod
     def open(cls, store: Path | str, aoi: AreaOfInterest) -> CoherenceStack:
@@ -145,81 +184,206 @@ class CoherenceStack:
         return cls(xr.open_zarr(store), aoi)
 
 
-def _clip_to_aoi(da: xr.DataArray, aoi: AreaOfInterest) -> xr.DataArray:
-    """Clip a 2-D coherence raster to the AOI geometry.
+def _marker_path(store: Path) -> Path:
+    return Path(str(store) + ".build.json")
 
-    Geographic (EPSG:4326) grids clip in lon/lat. Projected grids use
-    rioxarray with the AOI reprojected into the raster CRS.
-    """
-    crs = da.attrs.get("crs", "unknown")
-    if crs in ("unknown", None) or _coords_look_geographic(da):
-        return _clip_geographic(da, aoi)
 
+def _write_marker(
+    store: Path,
+    midpoints: Sequence[pd.Timestamp],
+    frame_key: tuple[int, int, str],
+    tier: str,
+    layer: dict,
+) -> None:
+    """Record committed timesteps atomically after each successful append."""
+    marker = {
+        "schema_version": "1",
+        "committed": len(midpoints),
+        "midpoints": [pd.Timestamp(midpoint).isoformat() for midpoint in midpoints],
+        "frame_key": list(frame_key),
+        "calibration_tier": tier,
+        "layer": layer,
+    }
+    path = _marker_path(store)
+    temporary = path.parent / (path.name + ".tmp")
+    temporary.write_text(json.dumps(marker))
+    temporary.replace(path)
+
+
+def _read_marker(store: Path) -> dict | None:
+    path = _marker_path(store)
+    if not path.exists():
+        return None
     try:
-        import rioxarray  # noqa: F401
-        from pyproj import Transformer
-    except ImportError as e:  # pragma: no cover - declared dependency
-        raise RuntimeError("rioxarray and pyproj are required to clip projected GUNW") from e
+        return json.loads(path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return None
 
-    epsg = int(str(crs).removeprefix("EPSG:"))
-    transformer = Transformer.from_crs("EPSG:4326", f"EPSG:{epsg}", always_xy=True)
-    geom_proj = shapely_transform(transformer.transform, aoi.shape)
 
-    clipped = (
-        da.rio.write_crs(f"EPSG:{epsg}", inplace=False)
-        .rio.write_nodata(np.nan, inplace=False)
-        .rio.clip([mapping(geom_proj)], crs=f"EPSG:{epsg}", drop=True)
-    )
-    clipped.attrs = dict(da.attrs)
+def _resume_point(
+    store: Path,
+    midpoints: Sequence[pd.Timestamp],
+    frame_key: tuple[int, int, str],
+    tier: str,
+    layer: dict,
+) -> int:
+    """Return the verified committed prefix length, or reject ambiguous state."""
+    if not store.exists():
+        return 0
+    marker = _read_marker(store)
+    if marker is None:
+        raise ValueError(f"stack store {store} has no build marker; delete it and rebuild")
+
+    committed = int(marker.get("committed", 0))
+    try:
+        with xr.open_zarr(store, consolidated=False) as existing:
+            store_times = pd.DatetimeIndex(pd.to_datetime(existing.time.values))
+            coherence_steps = int(existing["coherence"].sizes["time"])
+    except ValueError as error:
+        if "conflicting sizes" in str(error):
+            raise ValueError(
+                f"stack store {store} is torn after an interrupted append; delete it and rebuild"
+            ) from error
+        raise
+    if coherence_steps != len(store_times) or len(store_times) != committed:
+        raise ValueError(
+            f"stack store {store} disagrees with its build marker after an interrupted append; "
+            "delete it and rebuild"
+        )
+    if committed > len(midpoints):
+        raise ValueError(
+            f"stack store {store} has more timesteps than the supplied pair list; "
+            "delete it and rebuild"
+        )
+    if marker.get("calibration_tier") != tier:
+        raise ValueError(
+            f"stack store {store} was built at tier "
+            f"{marker.get('calibration_tier')!r}, not {tier!r}"
+        )
+    if marker.get("layer") != layer:
+        raise ValueError(
+            f"stack store {store} was built from layer {marker.get('layer')!r}, not {layer!r}"
+        )
+    recorded_frame = marker.get("frame_key")
+    frame_tuple = tuple(recorded_frame) if isinstance(recorded_frame, list | tuple) else None
+    if frame_tuple != frame_key:
+        raise ValueError(
+            f"stack store {store} was built for frame {frame_tuple or recorded_frame!r}, "
+            f"not {frame_key}"
+        )
+    expected = pd.DatetimeIndex([pd.Timestamp(value) for value in midpoints[:committed]])
+    if not store_times.equals(expected):
+        raise ValueError(
+            f"stack store {store} does not match the leading pairs of this list; "
+            "delete it and rebuild"
+        )
+    return committed
+
+
+def _grid_and_attrs_of(store: Path) -> tuple[GridSpec, dict]:
+    with xr.open_zarr(store, consolidated=False) as existing:
+        grid = GridSpec(y=np.asarray(existing["y"].values), x=np.asarray(existing["x"].values))
+        attrs = dict(existing.attrs)
+    return grid, attrs
+
+
+def _clip_to_aoi(raster: xr.DataArray, aoi: AreaOfInterest) -> xr.DataArray:
+    """Clip geographic or projected GUNW data without changing its native CRS."""
+    crs = raster.attrs.get("crs", "unknown")
+    if crs in ("unknown", None) or _coords_look_geographic(raster):
+        clipped = _clip_geographic(raster, aoi)
+    else:
+        try:
+            import rioxarray  # noqa: F401
+            from pyproj import Transformer
+        except ImportError as error:  # pragma: no cover - declared dependencies
+            raise RuntimeError("rioxarray and pyproj are required for projected GUNW") from error
+
+        transformer = Transformer.from_crs("EPSG:4326", str(crs), always_xy=True)
+        projected = shapely_transform(transformer.transform, aoi.shape)
+        clipped = (
+            raster.rio.write_crs(str(crs), inplace=False)
+            .rio.write_nodata(np.nan, inplace=False)
+            .rio.clip([mapping(projected)], crs=str(crs), drop=True)
+        )
+        clipped.attrs = dict(raster.attrs)
+    if clipped.sizes["x"] == 0 or clipped.sizes["y"] == 0:
+        raise ValueError(
+            f"granule {raster.attrs.get('granule_id', '?')} does not overlap AOI {aoi.name!r}"
+        )
     return clipped
 
 
-def _clip_geographic(da: xr.DataArray, aoi: AreaOfInterest) -> xr.DataArray:
-    """Clip when x/y are lon/lat (toy stacks and already-reprojected grids)."""
-    minx, miny, maxx, maxy = aoi.shape.bounds
-    x = da["x"]
-    y = da["y"]
-    x_asc = bool(x.values[-1] >= x.values[0])
-    y_asc = bool(y.values[-1] >= y.values[0])
-    return da.sel(
-        x=slice(minx, maxx) if x_asc else slice(maxx, minx),
-        y=slice(miny, maxy) if y_asc else slice(maxy, miny),
+def _clip_geographic(raster: xr.DataArray, aoi: AreaOfInterest) -> xr.DataArray:
+    min_x, min_y, max_x, max_y = aoi.shape.bounds
+    x_ascending = bool(raster["x"].values[-1] >= raster["x"].values[0])
+    y_ascending = bool(raster["y"].values[-1] >= raster["y"].values[0])
+    return raster.sel(
+        x=slice(min_x, max_x) if x_ascending else slice(max_x, min_x),
+        y=slice(min_y, max_y) if y_ascending else slice(max_y, min_y),
     )
 
 
-def _coords_look_geographic(da: xr.DataArray) -> bool:
-    """Heuristic: values in typical lon/lat ranges mean the grid is geographic."""
-    x = da["x"].values
-    y = da["y"].values
+def _coords_look_geographic(raster: xr.DataArray) -> bool:
+    x = raster["x"].values
+    y = raster["y"].values
     return bool(np.nanmax(np.abs(x)) <= 180 and np.nanmax(np.abs(y)) <= 90)
 
 
-def _match_grid(layer: xr.DataArray, reference: xr.DataArray) -> xr.DataArray:
-    """Reproject-match ``layer`` onto ``reference``'s (y, x) grid."""
-    if layer["x"].identical(reference["x"]) and layer["y"].identical(reference["y"]):
-        return layer
+@dataclass(frozen=True)
+class GridSpec:
+    """Coordinate vectors defining one frame group's fixed raster lattice."""
 
-    ref_crs = reference.attrs.get("crs", "unknown")
-    layer_crs = layer.attrs.get("crs", "unknown")
-    same_crs = ref_crs == layer_crs and ref_crs not in ("unknown", None)
+    y: np.ndarray
+    x: np.ndarray
 
-    if same_crs and not _coords_look_geographic(reference):
-        try:
-            import rioxarray  # noqa: F401
+    @classmethod
+    def of(cls, raster: xr.DataArray) -> GridSpec:
+        return cls(y=np.asarray(raster["y"].values), x=np.asarray(raster["x"].values))
 
-            matched = (
-                layer.rio.write_crs(ref_crs, inplace=False)
-                .rio.write_nodata(np.nan, inplace=False)
-                .rio.reproject_match(reference.rio.write_crs(ref_crs, inplace=False))
+    def vector(self, dimension: str) -> np.ndarray:
+        return self.y if dimension == "y" else self.x
+
+    def spacing(self, dimension: str) -> float:
+        vector = self.vector(dimension)
+        if vector.size < 2:
+            return 0.0
+        return abs(float(vector[1] - vector[0]))
+
+
+def _align_to(raster: xr.DataArray, grid: GridSpec, granule_id: str) -> xr.DataArray:
+    """Align compatible extents on one fixed frame lattice without resampling."""
+    if _grids_match(raster, grid):
+        return raster.assign_coords(y=grid.y, x=grid.x)
+
+    for dimension in ("y", "x"):
+        spacing = grid.spacing(dimension)
+        if spacing == 0.0 or raster.sizes[dimension] == 0:
+            continue
+        offset = abs(float(raster[dimension].values[0] - grid.vector(dimension)[0]))
+        phase = offset % spacing
+        phase = min(phase, spacing - phase)
+        if phase > spacing * GRID_TOLERANCE_FRACTION:
+            raise ValueError(
+                f"granule {granule_id} is off the stack grid in {dimension}: "
+                f"phase {phase:.6g}, pixel spacing {spacing:.6g}"
             )
-            # Preserve the time coordinate from the layer being aligned.
-            matched = matched.assign_coords(time=layer["time"])
-            matched.attrs = dict(layer.attrs)
-            return matched
-        except Exception as e:
-            logger.warning("reproject_match failed (%s); falling back to interp", e)
 
-    # Geographic or fallback: bilinear interp onto the reference grid.
-    interp = layer.interp(x=reference["x"], y=reference["y"], method="linear")
-    interp.attrs = dict(layer.attrs)
-    return interp
+    aligned = raster
+    for dimension, vector in (("y", grid.y), ("x", grid.x)):
+        spacing = grid.spacing(dimension)
+        tolerance = spacing / 2 if spacing else None
+        aligned = aligned.reindex({dimension: vector}, method="nearest", tolerance=tolerance)
+    aligned.attrs = dict(raster.attrs)
+    return aligned
+
+
+def _grids_match(raster: xr.DataArray, grid: GridSpec) -> bool:
+    for dimension in ("y", "x"):
+        vector = grid.vector(dimension)
+        if raster.sizes[dimension] != vector.size:
+            return False
+        tolerance = grid.spacing(dimension) * GRID_TOLERANCE_FRACTION
+        if not np.allclose(raster[dimension].values, vector, rtol=0, atol=tolerance):
+            return False
+    return True
