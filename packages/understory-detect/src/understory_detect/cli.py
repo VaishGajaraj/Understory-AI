@@ -8,9 +8,14 @@ afford to reproduce is not a benchmark.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
+import tempfile
+from datetime import UTC, datetime
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, Field
@@ -25,12 +30,15 @@ from understory_detect.report import render_markdown
 from understory_detect.scoring import score
 
 METHODOLOGY_VERSION = "0.1.2"
+REPORT_SCHEMA_VERSION = "1"
 
 
 class BenchmarkConfig(BaseModel):
     """One benchmark = one AOI + one date window + one detector + one label set."""
 
+    schema_version: Literal["1"] = "1"
     name: str
+    application: str = "forest-disturbance"
     aoi: str  # path to an AOI yaml, relative to the config file
     start: str  # ISO date
     end: str  # ISO date
@@ -80,21 +88,81 @@ def run_benchmark(config_path: Path) -> dict:
     report_dict["detector_config"] = detector.config.model_dump(mode="json")
     report_dict["kill_criteria"] = verdict.model_dump(mode="json")
     report_dict["detections"] = [d.model_dump(mode="json") for d in detections]
+    report_dict["run"] = {
+        "report_schema_version": REPORT_SCHEMA_VERSION,
+        "config_schema_version": config.schema_version,
+        "config_sha256": hashlib.sha256(config_path.read_bytes()).hexdigest(),
+        "generated_at": datetime.now(UTC).isoformat(),
+        "application": config.application,
+        "software_version": _software_version(),
+        "stack": _stack_manifest(stack),
+    }
 
     out = base / config.report_out
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(report_dict, indent=2) + "\n")
+    _atomic_write_text(out, json.dumps(report_dict, indent=2) + "\n")
 
     # Human-readable twin of the JSON — publishable tables are generated, never
     # hand-assembled.
     md_out = out.with_suffix(".md")
-    md_out.write_text(render_markdown(report_dict))
+    _atomic_write_text(md_out, render_markdown(report_dict))
 
     # QGIS-loadable alert layer next to the report — the format partners
     # already use, per the theory of change.
     alerts_out = out.with_name(f"{config.name}-alerts.geojson")
-    alerts_out.write_text(json.dumps(detections_to_geojson(detections, report), indent=2) + "\n")
+    _atomic_write_text(
+        alerts_out, json.dumps(detections_to_geojson(detections, report), indent=2) + "\n"
+    )
     return report_dict
+
+
+def _software_version() -> str:
+    try:
+        return version("understory-detect")
+    except PackageNotFoundError:  # pragma: no cover - editable installs normally provide metadata
+        return "unknown"
+
+
+def _json_safe(value: Any) -> Any:
+    """Convert Zarr/xarray metadata into JSON-safe values without losing identity."""
+    try:
+        return json.loads(json.dumps(value))
+    except (TypeError, ValueError):
+        return str(value)
+
+
+def _stack_manifest(stack: CoherenceStack) -> dict[str, Any]:
+    fields = (
+        "aoi",
+        "track",
+        "frame",
+        "flight_direction",
+        "calibration_tiers",
+        "n_pairs",
+        "crs",
+        "resolution_m",
+        "polarization",
+        "frequency",
+        "granule_ids",
+    )
+    attrs = stack.dataset.attrs
+    return {field: _json_safe(attrs[field]) for field in fields if field in attrs}
+
+
+def _atomic_write_text(path: Path, content: str) -> None:
+    """Replace a complete artifact atomically so interrupted runs do not leave partial files."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w", encoding="utf-8", dir=path.parent, prefix=f".{path.name}.", delete=False
+        ) as temporary:
+            temporary.write(content)
+            temporary.flush()
+            temporary_path = Path(temporary.name)
+        temporary_path.replace(path)
+    finally:
+        if temporary_path and temporary_path.exists():
+            temporary_path.unlink()
 
 
 def detections_to_geojson(detections: list, report) -> dict:

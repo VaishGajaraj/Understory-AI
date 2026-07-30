@@ -6,6 +6,7 @@ from understory_core.discovery import (
     pair_from_asf_properties,
     parse_pair_times,
     single_cycle_pairs,
+    summarize_coverage,
 )
 
 # A real scene name from the live BETA archive (first data contact, July 2026).
@@ -77,3 +78,20 @@ def test_group_by_frame_separates_geometries():
     assert set(grouped) == {(10, 5, "ASCENDING"), (10, 6, "ASCENDING")}
     frame_5 = grouped[(10, 5, "ASCENDING")]
     assert [p.reference_start.day for p in frame_5] == [1, 13]  # time-ordered
+
+
+def test_coverage_summary_is_json_ready_and_recommends_longest_frame():
+    pairs = [
+        make_pair(10, 5, "2026-01-01T09:00", "2026-01-13T09:00"),
+        make_pair(10, 5, "2026-01-13T09:00", "2026-01-25T09:00"),
+        make_pair(11, 8, "2026-01-01T09:00", "2026-01-13T09:00"),
+        make_pair(11, 8, "2026-01-01T09:00", "2026-01-25T09:00"),  # not 12-day
+    ]
+    summary = summarize_coverage(pairs, "provisional")
+
+    assert summary["schema_version"] == "1"
+    assert summary["pair_count"] == 4
+    assert summary["single_cycle_pair_count"] == 3
+    assert summary["recommended_frame"]["track"] == 10
+    assert summary["recommended_frame"]["pair_count"] == 2
+    assert len(summary["recommended_frame"]["granule_ids"]) == 2

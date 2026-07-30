@@ -23,6 +23,8 @@ This is a monorepo. Python packages carry the science and pipeline (the MVP); Ty
 | [`apps/viewer`](apps/viewer) | TypeScript | Thin web viewer for alerts and benchmark reports. Added early only as scaffolding; grows when a real user exists. |
 | [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) | — | The versioned methodology document. For a benchmark project, the method is the citable artifact. |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | — | Honest next steps toward a published real-data benchmark. |
+| [`docs/PRODUCT_STRATEGY.md`](docs/PRODUCT_STRATEGY.md) | — | Researched NISAR opportunity map and boundaries between reusable infrastructure and new science. |
+| [`docs/OPERATIONS.md`](docs/OPERATIONS.md) | — | Supported operator workflow, output contracts, and current production gaps. |
 
 ## Quickstart
 
@@ -51,6 +53,18 @@ make toy-bench
 ```
 
 Running a real benchmark requires NASA Earthdata credentials for ASF data access — see [`docs/DATA_ACCESS.md`](docs/DATA_ACCESS.md).
+
+For a production-shaped workflow, use the unified command surface:
+
+```bash
+uv run understory doctor
+uv run understory inventory benchmarks/amazon-para/aoi.yaml --tier provisional
+uv run understory build-stack benchmarks/amazon-para/aoi.yaml --out data/scratch/para.zarr
+uv run understory run benchmarks/toy/config.yaml
+```
+
+Inventory and diagnostics support `--json` for automation. See the
+[`operator guide`](docs/OPERATIONS.md) for the complete real-data path.
 
 ## Design principles
 

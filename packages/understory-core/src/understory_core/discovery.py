@@ -17,6 +17,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from datetime import date, datetime
+from typing import Any
 
 from understory_core.aoi import AreaOfInterest
 
@@ -142,3 +143,46 @@ def single_cycle_pairs(pairs: list[GunwPair]) -> list[GunwPair]:
     in the v0 time series.
     """
     return [p for p in pairs if p.temporal_baseline_days == REPEAT_CYCLE_DAYS]
+
+
+def summarize_coverage(pairs: list[GunwPair], tier: str) -> dict[str, Any]:
+    """Return a stable, JSON-ready view of usable archive coverage.
+
+    The summary is intentionally independent of terminal formatting so other
+    tools can use archive discovery without scraping ``probe_archive.py``.
+    """
+    usable = single_cycle_pairs(pairs)
+    frames: list[dict[str, Any]] = []
+    for (track, frame, direction), frame_pairs in sorted(group_by_frame(usable).items()):
+        frames.append(
+            {
+                "track": track,
+                "frame": frame,
+                "direction": direction,
+                "pair_count": len(frame_pairs),
+                "first_reference": frame_pairs[0].reference_start.date().isoformat(),
+                "last_secondary": frame_pairs[-1].secondary_start.date().isoformat(),
+                "granule_ids": [pair.granule_id for pair in frame_pairs],
+            }
+        )
+
+    recommended = None
+    if frames:
+        recommended = max(
+            frames,
+            key=lambda item: (
+                item["pair_count"],
+                item["last_secondary"],
+                -item["track"],
+                -item["frame"],
+            ),
+        )
+    return {
+        "schema_version": "1",
+        "tier": tier,
+        "pair_count": len(pairs),
+        "single_cycle_pair_count": len(usable),
+        "frame_count": len(frames),
+        "recommended_frame": recommended,
+        "frames": frames,
+    }

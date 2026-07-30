@@ -12,11 +12,14 @@ Honest sequencing for the **open** NISAR forest-degradation benchmark. Dates are
 - [x] `CoherenceStack.build` — clip/align/stack pairs → Zarr (`scripts/build_stack.py`)
 - [x] Forest / terrain / ERA5 join APIs on local rasters (`understory_core.masks`, `scripts/apply_masks.py`)
 - [x] Markdown twin of every machine-readable benchmark report
+- [x] Unified operator CLI for environment diagnostics, JSON archive inventory, and benchmark runs
+- [x] Versioned run manifest with config hash, software version, application, and stack provenance
+- [x] Production and NISAR opportunity strategy grounded in official product boundaries
 
 ## Now (unblocks a real published number)
 
 1. **One-pair PROVISIONAL smoke test** — the 30 July probe found current 12-day products in every benchmark AOI. Run one through extraction, clipping, masking, and GeoJSON export to validate real-data correctness without presenting a benchmark result.
-2. **Archive watch** — poll Pará / eastern-woodland AOIs with `scripts/probe_archive.py` until one fixed forest frame has ≥6 consecutive 12-day pairs.
+2. **Archive watch** — poll Pará / eastern-woodland AOIs with `understory inventory` until one fixed forest frame has ≥6 consecutive 12-day pairs.
 3. **Label transcription** — fill `packages/understory-labels/data/events/amazon-para-imazon.geojson` from published Imazon SAD / IBAMA records (external ground truth). Empty scaffolds are placeholders, not claims.
 4. **First real stack** — freeze a track/frame and build a 20 m PROVISIONAL stack; apply forest/terrain masks; run `understory-bench`; treat the report as exploratory.
 5. **Validated-stream re-validation** — mandatory gate once `NISAR_L2_GUNW_V1` fills ([`METHODOLOGY.md`](METHODOLOGY.md) caveats).

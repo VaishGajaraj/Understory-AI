@@ -23,6 +23,13 @@ def main() -> int:
         failures.append(f"recall {report['event_recall']} != 1.0")
     if report["false_positives"] != 0:
         failures.append(f"{report['false_positives']} false positives (rain blob leaked through?)")
+    run = report.get("run", {})
+    if run.get("report_schema_version") != "1":
+        failures.append("missing report schema version 1")
+    if len(run.get("config_sha256", "")) != 64:
+        failures.append("missing SHA-256 configuration identity")
+    if run.get("application") != "forest-disturbance":
+        failures.append("missing application identity")
 
     if failures:
         print("toy benchmark regression:", "; ".join(failures), file=sys.stderr)
