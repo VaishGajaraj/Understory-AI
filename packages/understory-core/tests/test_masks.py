@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
+from pyproj import Transformer
 from understory_core.aoi import AreaOfInterest
 from understory_core.masks import (
     combine_masks,
@@ -60,6 +61,31 @@ def test_forest_mask_from_in_memory_landcover(aoi, grid):
     assert mask.dims == ("y", "x")
     assert mask.dtype == bool
     # Western columns of the grid should be forest-dominant.
+    assert int(mask.isel(x=0).sum()) > int(mask.isel(x=-1).sum())
+
+
+def test_geographic_forest_mask_reprojects_to_projected_gunw_grid(aoi, grid):
+    xx = np.linspace(-55.03, -54.97, 20)
+    yy = np.linspace(-6.97, -7.03, 20)
+    values = np.broadcast_to(
+        np.where(xx[None, :] < -55.0, 10, 30).astype(np.uint8), (20, 20)
+    ).copy()
+    landcover = xr.DataArray(
+        values,
+        dims=("y", "x"),
+        coords={"y": yy, "x": xx},
+        attrs={"crs": "EPSG:4326"},
+    )
+
+    transformer = Transformer.from_crs("EPSG:4326", "EPSG:32721", always_xy=True)
+    projected_x = [transformer.transform(float(lon), -7.0)[0] for lon in grid.x]
+    projected_y = [transformer.transform(-55.0, float(lat))[1] for lat in grid.y]
+    projected_grid = grid.assign_coords(x=projected_x, y=projected_y)
+    projected_grid.attrs["crs"] = "EPSG:32721"
+
+    mask = forest_mask(aoi, projected_grid, landcover=landcover)
+    assert mask.dims == ("y", "x")
+    assert int(mask.sum()) > 0
     assert int(mask.isel(x=0).sum()) > int(mask.isel(x=-1).sum())
 
 
