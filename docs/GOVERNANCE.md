@@ -4,7 +4,7 @@
 
 ## What this project is for
 
-Understory detects **physical disturbance of terrain and vegetation** — logging roads, mining pits, clearings — to support forest protection: NGO and indigenous territorial monitoring, environmental enforcement, carbon-market integrity, and EUDR compliance. It is a civilian project. Defense applications are out of scope for this repository, its partnerships, and its communications.
+Understory detects **physical disturbance of terrain and vegetation** — logging roads, mining pits, clearings — to support forest protection: NGO and indigenous territorial monitoring, environmental enforcement, carbon-market integrity, and EUDR compliance. It is a civilian project. Defense applications are out of scope for this repository, its partnerships, and its communications. A companion planning note only exists at [docs/WORKING_DEFENSE.md](WORKING_DEFENSE.md); see also [docs/WORKING_OPEN.md](WORKING_OPEN.md) §10.
 
 ## Norms, in force from the first release
 

@@ -1,6 +1,6 @@
 # Understory Benchmark Methodology
 
-**Version 0.1.0 (draft)** — this document is versioned alongside the code because, for a benchmark project, the method is the citable artifact. Reviewers must be able to point at a frozen version; results reports record the methodology version they were produced under.
+**Version 0.1.1 (draft)** — this document is versioned alongside the code because, for a benchmark project, the method is the citable artifact. Reviewers must be able to point at a frozen version; results reports record the methodology version they were produced under.
 
 ## 1. Question
 
@@ -21,7 +21,7 @@ All thresholds live in benchmark config files, never in code.
 
 ## 4. Scoring
 
-- **Event-level matching**: greedy one-to-one, detections in descending score order, matched to confirmed labels by centroid distance ≤ 500 m within a temporal window of ± 36 days around the label's date window. Spatial IoU is reported but not required in v0.
+- **Event-level matching**: greedy one-to-one, detections in descending score order, matched to confirmed labels by centroid distance ≤ 500 m within a temporal window of ± 36 days around the label's date window. Spatial IoU is reported (`mean_match_iou`) but not required in v0.
 - **Metrics**: event precision, recall, F1; median detection latency (first anomalous pair midpoint minus event window start); median lead over the optical alert record (GLAD/RADD/DETER dates for the same events, where available); minimum-detectable-size curve (recall binned by event area).
 - Only `confirmed` labels count as positives. Detections matching `rejected` labels are false positives — verified natural decorrelation is exactly what the detector must not fire on.
 - Every run emits a machine-readable JSON report. Published tables are generated from reports, never hand-assembled.
@@ -44,9 +44,11 @@ Known v0 synthetic bound: with default thresholds (12-pixel cluster minimum), th
 
 - **Pre-calibration artifacts**: NISAR products before the calibrated July 2026 stream carry documented radiometric banding. Re-validation on calibrated data is a mandatory gate before any number is treated as final.
 - **Ionosphere**: L-band is more susceptible than shorter wavelengths; split-spectrum correction is a v1 item.
-- **Terrain**: steep-slope geometric distortion is masked, not modeled, in v0.
+- **Terrain**: steep-slope geometric distortion is masked, not modeled, in v0 (`understory_core.masks.terrain_mask`).
+- **Forest constraint**: candidates outside forest land cover are suppressed when a WorldCover (or compatible) mask is joined onto the stack (`valid` variable; see `scripts/apply_masks.py`).
 - **Latency floor**: the 12-day revisit is a hard floor on detection latency; the project never promises faster than the physics allows.
 
 ## Changelog
 
+- **0.1.1** (2026-07): document forest/terrain mask join; reports include mean match IoU and a Markdown twin.
 - **0.1.0** (2026-07): initial draft; matching tolerances and v0 detector defined ahead of first data contact — expect revision on contact.

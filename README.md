@@ -22,6 +22,7 @@ This is a monorepo. Python packages carry the science and pipeline (the MVP); Ty
 | [`benchmarks/`](benchmarks) | Config | Benchmark configurations per geography (Amazon/Pará first). Each runs end-to-end from a single command. |
 | [`apps/viewer`](apps/viewer) | TypeScript | Thin web viewer for alerts and benchmark reports. Added early only as scaffolding; grows when a real user exists. |
 | [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) | — | The versioned methodology document. For a benchmark project, the method is the citable artifact. |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | — | Honest next steps toward a published real-data benchmark. |
 
 ## Quickstart
 
