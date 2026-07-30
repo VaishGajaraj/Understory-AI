@@ -4,10 +4,14 @@ Application-agnostic NISAR data plumbing. The same code serves a forest in Pará
 
 ## Modules
 
-- `aoi` — area-of-interest definitions (geometry + track/frame resolution)
-- `discovery` — NISAR granule search via `asf_search`, filtered to interferometric product pairs on the 12-day repeat cycle
-- `ingest` — granule retrieval (in-region S3 direct access preferred; download fallback) and coherence-layer extraction
-- `stack` — per-pixel coherence time-series stack construction (xarray/dask, Zarr-backed)
-- `tiling` — tile grid over an AOI so stack computation parallelizes per tile
-- `cache` — local/S3 content-addressed cache so no granule is fetched or processed twice
-- `catalog` — STAC metadata over the project's own outputs
+- `aoi` — area-of-interest definitions (geometry + metadata)
+- `discovery` — NISAR GUNW search via `asf_search`, calibration tiers, 12-day pair filter, frame grouping
+- `ingest` — granule fetch into a local cache + coherence-layer extraction from GUNW HDF5
+- `stack` — `CoherenceStack.build` / `open`: clip pairs to an AOI, align on a common grid, write Zarr
+- `masks` — forest (WorldCover), terrain (DEM slope), and ERA5 weather joins from local inputs
+
+## Scripts (repo root)
+
+- `scripts/probe_archive.py` — coverage / cadence probe (no credentials for search)
+- `scripts/build_stack.py` — discovery → longest frame series → Zarr
+- `scripts/apply_masks.py` — join forest/terrain masks onto an existing stack (`valid` variable)
