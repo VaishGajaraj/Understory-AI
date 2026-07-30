@@ -22,6 +22,7 @@ dependencies = [
 ]
 
 [project.scripts]
+understory = "understory_detect.product_cli:main"
 understory-bench = "understory_detect.cli:main"
 
 [build-system]
