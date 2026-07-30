@@ -1,0 +1,11 @@
+# Amazon mining benchmark — same pipeline as amazon-para; class focus is mining.
+# Labels empty until external records are transcribed. Do not treat an empty
+# run as a published result.
+name: amazon-mining
+aoi: aoi.yaml
+start: "2026-01-01"
+end: "2026-12-31"
+detector: v0-filters
+labels: ../../packages/understory-labels/data/events/amazon-mining.geojson
+stack_store: data/scratch/amazon-mining.zarr
+report_out: reports/amazon-mining.json

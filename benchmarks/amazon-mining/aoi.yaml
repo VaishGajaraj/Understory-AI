@@ -1,0 +1,15 @@
+name: amazon-mining
+description: >
+  Tapajós / BR-163 artisanal-mining frontier (Pará) — second open benchmark
+  geography for the same coherence pipeline. Mining pits and soil disturbance
+  are expected to be a stronger, more persistent CCD signal than selective
+  logging; still requires external labels before any published claim.
+biome: amazon-moist-forest
+geometry:
+  type: Polygon
+  coordinates:
+    - - [-56.5, -6.5]
+      - [-55.5, -6.5]
+      - [-55.5, -5.5]
+      - [-56.5, -5.5]
+      - [-56.5, -6.5]

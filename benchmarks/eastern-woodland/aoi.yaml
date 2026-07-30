@@ -1,0 +1,16 @@
+name: eastern-woodland
+description: >
+  Instrumented eastern-temperate woodland sites for controlled disturbances of
+  known date, size, and type. Produces the minimum-detectable-event-size curve
+  that published Amazon records cannot. Placeholder AOI near a temperate
+  forest research belt — replace with the actual instrumented polygon once a
+  site partner is confirmed.
+biome: eastern-temperate-woodland
+geometry:
+  type: Polygon
+  coordinates:
+    - - [-78.8, 37.8]
+      - [-78.5, 37.8]
+      - [-78.5, 38.0]
+      - [-78.8, 38.0]
+      - [-78.8, 37.8]

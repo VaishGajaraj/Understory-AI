@@ -6,6 +6,6 @@ aoi: aoi.yaml
 start: "2026-07-01"
 end: "2026-12-31"
 detector: v0-filters
-labels: ../../packages/understory-labels/data/events/eastern-woodland-controlled.geojson # TODO
+labels: ../../packages/understory-labels/data/events/eastern-woodland-controlled.geojson
 stack_store: data/scratch/eastern-woodland.zarr
 report_out: reports/eastern-woodland.json

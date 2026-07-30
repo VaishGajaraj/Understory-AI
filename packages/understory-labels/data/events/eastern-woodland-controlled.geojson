@@ -1,0 +1,5 @@
+{
+  "type": "FeatureCollection",
+  "description": "Placeholder for eastern-woodland controlled-disturbance labels (known date, size, type). Empty until instrumented sites are selected and disturbances executed. Required for the ≤2 ha kill criterion.",
+  "features": []
+}
