@@ -115,5 +115,6 @@ The two numbers to read first:
   supports with the SLO's headroom intact.
 - `slo.objectives[].status` — `PASS`, `FAIL`, or `INSUFFICIENT_DATA`.
 
-Measured results and the scaling analysis are written up in
-[`docs/PERFORMANCE.md`](../../docs/PERFORMANCE.md).
+The harness calculations are covered in normal CI. Execute the synthetic workload itself on the
+hardware being evaluated; shared-runner timings are not deployment evidence. The decision boundary is
+documented in [`docs/PERFORMANCE.md`](../../docs/PERFORMANCE.md).

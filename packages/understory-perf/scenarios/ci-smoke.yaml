@@ -1,4 +1,4 @@
-# CI gate. Small enough to run on a shared runner in ~2 minutes, big enough to
+# Short developer smoke scenario. Small enough for a quick local run, big enough to
 # catch a regression that would change the capacity story: a memory-model
 # blow-up, a stage that silently upcasts, or a task that starts failing.
 #

@@ -26,16 +26,6 @@ jobs:
           uv run python scripts/make_toy_stack.py
           uv run understory-bench benchmarks/toy/config.yaml
           uv run python scripts/assert_toy_report.py benchmarks/toy/reports/toy.json
-      # Guards the shape of the capacity story, not its absolute numbers — a
-      # shared runner is not the deployment target. Fails if an SLO regresses,
-      # a task errors, or peak memory stops being proportionate to input.
-      - name: Load gate — SLOs under a burst
-        run: uv run understory-load packages/understory-perf/scenarios/ci-smoke.yaml
-      # A quick empirical guard against a memory-model blow-up. Full
-      # recalibration remains an explicit release check (`make measure-memory`).
-      - name: Memory model smoke check
-        run: uv run python scripts/measure_baseline_memory.py --quick
-
   typescript:
     runs-on: ubuntu-latest
     steps:

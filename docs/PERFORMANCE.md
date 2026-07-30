@@ -16,8 +16,10 @@ synthetic arrays with explicit NISAR-scale dimensions. It evaluates four service
 | Peak resident memory | <= 75% of a 16 GB node | Avoid mid-cycle out-of-memory failures. |
 | Failure rate | 0% | A silently missing frame group is not an acceptable alerting mode. |
 
-The CI smoke scenario checks that the harness and memory model remain healthy. It is intentionally too
-small, and GitHub-hosted hardware too variable, to establish deployment capacity.
+The `ci-smoke` scenario is a short developer regression run. It is intentionally too small, and
+GitHub-hosted hardware too variable, to establish deployment capacity. Harness calculations and SLO
+evaluation are covered by unit tests on every pull request; capacity runs execute deliberately on the
+hardware being evaluated.
 
 ## What the harness does not prove
 
