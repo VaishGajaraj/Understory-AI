@@ -36,14 +36,23 @@ class PlantedDisturbance(BaseModel):
     shape: Literal["line", "blob"]
     # Center in scene fractional coordinates (0..1 across the grid).
     center: tuple[float, float] = (0.5, 0.5)
-    # line: length in pixels along a diagonal, 2 px wide.
+    # line: length in pixels along a diagonal, width_px wide.
     # blob: side of a square patch in pixels.
     size_px: int = 20
+    width_px: int = 2  # line width; ignored for blobs
     coherence: float = 0.2  # coherence inside the disturbance
+    # Sub-pixel fill: fraction of each covered cell the disturbance occupies.
+    # A 5 m skid trail in a 55 m pixel fills ~0.1 of it; the rest stays
+    # coherent forest, diluting the measured drop. 1.0 = fills the cell.
+    fill_fraction: float = 1.0
     from_step: int = 5  # first timestep the disturbance is present
     persistent: bool = True  # False = present at from_step only (weather-like)
 
     model_config = {"frozen": True}
+
+    def effective_coherence(self, base: float) -> float:
+        """Cell-level coherence after sub-pixel dilution against a base level."""
+        return self.fill_fraction * self.coherence + (1 - self.fill_fraction) * base
 
 
 class SceneConfig(BaseModel):
@@ -81,8 +90,9 @@ def generate_scene(config: SceneConfig) -> xr.Dataset:
     for disturbance in config.disturbances:
         ys, xs = _footprint(disturbance, n)
         last_step = config.n_steps if disturbance.persistent else disturbance.from_step + 1
+        level = disturbance.effective_coherence(config.base_coherence)
         for t in range(disturbance.from_step, last_step):
-            coherence[t, ys, xs] = disturbance.coherence + rng.normal(0, 0.03, size=len(ys))
+            coherence[t, ys, xs] = level + rng.normal(0, 0.03, size=len(ys))
 
     return xr.Dataset(
         {"coherence": (("time", "y", "x"), np.clip(coherence, 0.0, 1.0).astype(np.float32))},
@@ -152,11 +162,15 @@ def _footprint(disturbance: PlantedDisturbance, n: int) -> tuple[np.ndarray, np.
     cx = int(disturbance.center[0] * (n - 1))
     half = disturbance.size_px // 2
     if disturbance.shape == "line":
-        # 2-pixel-wide diagonal centered on (cy, cx)
+        # width_px-wide diagonal centered on (cy, cx), widened row-wise
+        width = max(1, disturbance.width_px)
         steps = np.arange(-half, disturbance.size_px - half)
-        ys = np.clip(cy + steps, 0, n - 2)
+        ys = np.clip(cy + steps, 0, n - width)
         xs = np.clip(cx + steps, 0, n - 1)
-        return np.concatenate([ys, ys + 1]), np.concatenate([xs, xs])
+        return (
+            np.concatenate([ys + dy for dy in range(width)]),
+            np.concatenate([xs for _ in range(width)]),
+        )
     # blob: square patch
     side = np.arange(-half, disturbance.size_px - half)
     yy, xx = np.meshgrid(np.clip(cy + side, 0, n - 1), np.clip(cx + side, 0, n - 1))
