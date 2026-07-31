@@ -314,3 +314,36 @@ def test_rescore_does_not_invent_a_sample_count():
         "timings": [],
     }
     assert RunResult.from_report(report).rss_samples == 0
+
+
+def test_rescore_verdict_survives_display_rounding():
+    """Storing peak memory only as round(gb, 3) could flip the formatted
+    verdict on rescore when the true bytes sit on a %.2f boundary: 1204749999
+    bytes displays as 1.20 GB, but round(1.204749999, 3) = 1.205 reloads to
+    1.20**5** and formats as 1.21 GB. The report now carries the exact bytes
+    alongside the display value; from_report must prefer them."""
+    from understory_perf.runner import RunResult
+
+    boundary_bytes = 1_204_749_999
+    base = {
+        "scenario": "x",
+        "workload": {"name": "w", "compression": 1e-4, "notes": []},
+        "run": {
+            "config": {"workers": 4},
+            "height_px": 10,
+            "width_px": 10,
+            "peak_total_rss_gb": round(boundary_bytes / 1e9, 3),
+            "makespan_seconds": 1.0,
+            "deadline_days": 12.0,
+            "n_failed": 0,
+        },
+        "timings": [],
+    }
+    # New reports: exact bytes present and preferred — bit-identical round trip.
+    exact = {**base, "run": {**base["run"], "peak_total_rss_bytes": boundary_bytes}}
+    assert RunResult.from_report(exact).peak_total_rss_bytes == boundary_bytes
+    # Old reports: only the rounded display value exists; reconstruction from
+    # it is the best available (and documented as such).
+    assert RunResult.from_report(base).peak_total_rss_bytes == int(
+        round(round(boundary_bytes / 1e9, 3) * 1e9)
+    )

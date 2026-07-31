@@ -183,7 +183,17 @@ class RunResult:
             height_px=run["height_px"],
             width_px=run["width_px"],
             timings=report["timings"],
-            peak_total_rss_bytes=int(round(run["peak_total_rss_gb"] * 1e9)),
+            # Prefer the exact measurement: the peak-memory objective formats
+            # its observed value from these bytes, and reconstructing them from
+            # the 3-decimal display field can shift the formatted value across
+            # a rounding boundary, so a rescore would contradict the original
+            # verdict. Reports predating the exact field only stored the
+            # display rounding, which is then the best available.
+            peak_total_rss_bytes=(
+                run["peak_total_rss_bytes"]
+                if "peak_total_rss_bytes" in run
+                else int(round(run["peak_total_rss_gb"] * 1e9))
+            ),
             # 0 when the report predates the field. Inventing a count here would
             # be written back by cli.rescore and become indistinguishable from a
             # genuinely sampled run, and slo._memory reads it as "was this
@@ -234,6 +244,11 @@ class RunResult:
             "latency_max": _r(max(latencies, default=None)),
             "throughput_mb_per_s": _r(self.throughput_bytes_per_second / 1e6),
             "total_input_gb": _r(self.total_input_bytes / 1e9),
+            # Exact bytes alongside the rounded display value: the SLO verdict
+            # is formatted from this number, and a rescore must reproduce the
+            # verdict exactly — round(gb, 3) then "%.2f" is not always "%.2f"
+            # of the raw value.
+            "peak_total_rss_bytes": self.peak_total_rss_bytes,
             "peak_total_rss_gb": _r(self.peak_total_rss_bytes / 1e9),
             "peak_rss_per_worker_gb": _r(
                 max((t["peak_rss_bytes"] for t in self.timings), default=0) / 1e9
