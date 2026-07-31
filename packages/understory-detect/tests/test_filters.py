@@ -42,3 +42,29 @@ def test_linearity_separates_lines_from_blobs():
     blob[5:12, 5:12] = True
     assert linearity_score(line) > 0.9
     assert linearity_score(blob) < 0.3
+
+
+def test_scene_guard_suppresses_scene_wide_passes():
+    from understory_detect.filters import scene_guard
+
+    values = np.zeros((4, 10, 10))
+    values[1] = 1  # every pixel anomalous at t1 — weather, not events
+    values[2, 3:5, 3:5] = 1  # small local anomaly at t2 — keep
+    guarded, suppressed = scene_guard(mask_from(values), max_fraction=0.10)
+    assert len(suppressed) == 1
+    assert not guarded.values[1].any()
+    assert guarded.values[2, 3:5, 3:5].all()
+
+
+def test_scene_guard_denominator_uses_valid_mask():
+    from understory_detect.filters import scene_guard
+
+    values = np.zeros((1, 10, 10))
+    values[0, :2, :] = 1  # 20 anomalous pixels
+    # Only 40 pixels are valid forest -> fraction 0.5, not 0.2
+    valid = np.zeros((10, 10), dtype=bool)
+    valid[:4, :] = True
+    valid_da = mask_from(values[:1])[0].copy(data=valid)
+    guarded, suppressed = scene_guard(mask_from(values), max_fraction=0.3, valid=valid_da)
+    assert len(suppressed) == 1
+    assert not guarded.values.any()

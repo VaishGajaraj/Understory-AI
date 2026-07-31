@@ -125,3 +125,29 @@ def test_detector_thresholds_are_loaded_from_config():
         {"filters": {"min_cluster_pixels": 10_000}},
     )
     assert detector.detect(synthetic_stack()) == []
+
+
+def test_scene_wide_rain_pass_is_suppressed_but_road_survives():
+    """A pass where rain decorrelates the whole scene must produce no events
+    of its own, and a road persisting into clean later passes still confirms."""
+    rng = np.random.default_rng(11)
+    n = 40
+    values = 0.7 + rng.normal(0, 0.04, size=(len(TIMES), n, n)).astype(np.float32)
+    idx = np.arange(10, 30)
+    for t in range(5, len(TIMES)):  # road from t5 onward
+        values[t, idx, idx] = 0.2
+        values[t, idx + 1, idx] = 0.2
+    values[4] = 0.25 + rng.normal(0, 0.05, size=(n, n))  # scene-wide rain at t4
+
+    dataset = xr.Dataset(
+        {"coherence": (("time", "y", "x"), values)},
+        coords={
+            "time": TIMES,
+            "y": np.linspace(-6.99, -7.01, n),
+            "x": np.linspace(-55.01, -54.99, n),
+        },
+    )
+    stack = CoherenceStack(dataset, synthetic_stack().aoi)
+    detections = V0FilterDetector().detect(stack)
+    assert len(detections) == 1  # the road, nothing from the rain pass
+    assert detections[0].persistence_passes >= 2

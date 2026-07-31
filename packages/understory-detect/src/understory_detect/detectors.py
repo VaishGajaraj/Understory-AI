@@ -8,6 +8,7 @@ the scoring harness).
 
 from __future__ import annotations
 
+import logging
 import warnings
 
 from pydantic import BaseModel
@@ -15,8 +16,15 @@ from understory_core.stack import CoherenceStack
 
 from understory_detect.baseline import BaselineConfig, anomaly_deficit
 from understory_detect.events import extract_events
-from understory_detect.filters import FilterConfig, cluster_filter, persistence_filter
+from understory_detect.filters import (
+    FilterConfig,
+    cluster_filter,
+    persistence_filter,
+    scene_guard,
+)
 from understory_detect.interface import Detection
+
+logger = logging.getLogger(__name__)
 
 
 class V0Config(BaseModel):
@@ -45,8 +53,19 @@ class V0FilterDetector:
         candidates = (deficit > cfg.baseline.anomaly_sigma).fillna(False)
 
         # Optional forest/terrain validity mask joined at stack-build time.
-        if stack.valid is not None:
-            candidates = candidates.where(stack.valid.load(), other=False)
+        valid = stack.valid.load() if stack.valid is not None else None
+        if valid is not None:
+            candidates = candidates.where(valid, other=False)
+
+        candidates, suppressed = scene_guard(
+            candidates, cfg.filters.max_scene_fraction, valid=valid
+        )
+        if suppressed:
+            logger.warning(
+                "scene guard suppressed %d pass(es) as environmental: %s",
+                len(suppressed),
+                ", ".join(suppressed),
+            )
 
         persistent = persistence_filter(candidates, cfg.filters.min_persistence_pairs)
         clustered = cluster_filter(persistent, cfg.filters.min_cluster_pixels)

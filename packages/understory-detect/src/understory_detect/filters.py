@@ -32,6 +32,43 @@ class FilterConfig(BaseModel):
     min_persistence_pairs: int = Field(default=2, ge=1)
     min_cluster_pixels: int = Field(default=12, ge=1)
     min_linearity: float = 0.0  # 0 disables the geometry cut; tune on the benchmark
+    # Scene guard: when more than this fraction of scored pixels goes anomalous
+    # in a single pass, that pass is weather/ionosphere, not thirty
+    # simultaneous logging events — suppress it wholesale. 1.0 disables.
+    max_scene_fraction: float = Field(default=0.10, gt=0.0, le=1.0)
+
+
+def scene_guard(
+    candidates: xr.DataArray,
+    max_fraction: float,
+    valid: xr.DataArray | None = None,
+) -> tuple[xr.DataArray, list[str]]:
+    """Suppress passes where the anomaly is scene-wide.
+
+    Human disturbance is spatially bounded; rain, soil-moisture change, and
+    ionospheric activity decorrelate broad swaths at once. When the anomalous
+    fraction of scored pixels in one pass exceeds ``max_fraction``, the whole
+    pass is treated as an environmental event and dropped from candidacy —
+    the fourth filter, and the cheapest possible weather join (it needs no
+    weather data at all).
+
+    Returns (guarded candidates, ISO dates of suppressed passes). A genuine
+    disturbance persisting into clean later passes still confirms there.
+    """
+    if valid is not None:
+        denominator = int(valid.sum())
+        counts = candidates.where(valid, other=False).sum(("y", "x"))
+    else:
+        denominator = int(candidates.sizes["y"] * candidates.sizes["x"])
+        counts = candidates.sum(("y", "x"))
+    if denominator == 0:
+        return candidates, []
+    fraction = counts / denominator
+    keep = fraction <= max_fraction
+    suppressed = [
+        str(t)[:10] for t, k in zip(candidates["time"].values, keep.values, strict=True) if not k
+    ]
+    return candidates.where(keep, other=False), suppressed
 
 
 def persistence_filter(candidates: xr.DataArray, min_pairs: int) -> xr.DataArray:
