@@ -1,6 +1,6 @@
 [project]
 name = "understory-detect"
-version = "0.1.0"
+version = "0.2.0"
 description = "Seasonal coherence baselines, anomaly detection, persistence/geometry filters, and the benchmark scoring harness"
 readme = "README.md"
 requires-python = ">=3.11"

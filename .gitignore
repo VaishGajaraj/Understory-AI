@@ -43,3 +43,6 @@ reports/
 .DS_Store
 .idea/
 .vscode/
+
+# Private planning documents — not part of the open project
+UNDERSTORY AI Docs/

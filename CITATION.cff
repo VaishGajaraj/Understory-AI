@@ -6,8 +6,8 @@ authors:
   - family-names: Gajaraj
     given-names: Vaish
     email: vaish.gajaraj@gmail.com
-version: 0.1.0
-date-released: 2026-07-06
+version: 0.2.0
+date-released: 2026-07-30
 license: Apache-2.0
 repository-code: "https://github.com/VaishGajaraj/Understory-AI"
 keywords:

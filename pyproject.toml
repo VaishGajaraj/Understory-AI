@@ -1,6 +1,6 @@
 [project]
 name = "understory"
-version = "0.1.0"
+version = "0.2.0"
 description = "Open benchmark for detecting ground disturbance beneath forest canopy using NISAR L-band coherence"
 readme = "README.md"
 requires-python = ">=3.11"

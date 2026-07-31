@@ -1,6 +1,6 @@
 [project]
 name = "understory-labels"
-version = "0.1.0"
+version = "0.2.0"
 description = "The open labeled disturbance-event library: schema, validation tooling, and versioned data releases"
 readme = "README.md"
 requires-python = ">=3.11"
