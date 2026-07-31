@@ -14,12 +14,15 @@ which this module encodes:
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any
 
 from understory_core.aoi import AreaOfInterest
+
+logger = logging.getLogger(__name__)
 
 # NISAR repeat cycle in days — a hard floor on detection latency.
 REPEAT_CYCLE_DAYS = 12
@@ -174,15 +177,48 @@ def search_gunw_pairs(
     # asf_search.search is a function shadowing a submodule of the same name,
     # which the type checker resolves to the module; getattr sidesteps that.
     search_fn = getattr(asf, "search")  # noqa: B009
-    results = search_fn(
-        shortName=GUNW_COLLECTIONS[tier],
-        intersectsWith=aoi.wkt,
-        start=start.isoformat(),
-        end=end.isoformat(),
-        maxResults=max_results,
+    results = _with_retry(
+        lambda: search_fn(
+            shortName=GUNW_COLLECTIONS[tier],
+            intersectsWith=aoi.wkt,
+            start=start.isoformat(),
+            end=end.isoformat(),
+            maxResults=max_results,
+        )
     )
     pairs = [pair_from_asf_properties(r.properties, tier) for r in results]
     return sorted(pairs, key=lambda p: (p.frame_key, p.reference_start))
+
+
+def _with_retry(op, attempts: int = 3, base_delay_s: float = 2.0):
+    """Retry a CMR/ASF call on transient failures with exponential backoff.
+
+    Cron watches and long benchmark runs should not die on one blip of the
+    search API. Only network/server-shaped errors retry; programming errors
+    (bad parameters, unknown tier) surface immediately.
+    """
+    import time
+
+    import asf_search as asf
+    import requests
+
+    transient = (asf.exceptions.ASFSearchError, requests.RequestException, ConnectionError)
+    for attempt in range(attempts):
+        try:
+            return op()
+        except transient as e:
+            if attempt == attempts - 1:
+                raise
+            delay = base_delay_s * (2**attempt)
+            logger.warning(
+                "search attempt %d/%d failed (%s) — retrying in %.0fs",
+                attempt + 1,
+                attempts,
+                type(e).__name__,
+                delay,
+            )
+            time.sleep(delay)
+    raise AssertionError("unreachable")
 
 
 def group_by_frame(pairs: list[GunwPair]) -> dict[tuple[int, int, str], list[GunwPair]]:

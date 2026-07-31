@@ -20,6 +20,7 @@ from typing import Any, Literal
 import yaml
 from pydantic import BaseModel, Field
 from understory_core.aoi import AreaOfInterest
+from understory_core.logutil import setup_logging
 from understory_core.stack import CoherenceStack
 from understory_labels import __version__ as labels_version
 from understory_labels.events import load_collection
@@ -198,7 +199,9 @@ def main(argv: list[str] | None = None) -> int:
         description="Run an Understory benchmark end-to-end from a config file.",
     )
     parser.add_argument("config", type=Path, help="Path to a benchmark config.yaml")
+    parser.add_argument("-v", "--verbose", action="count", default=0)
     args = parser.parse_args(argv)
+    setup_logging(args.verbose)
     try:
         report = run_benchmark(args.config)
     except FileNotFoundError as e:

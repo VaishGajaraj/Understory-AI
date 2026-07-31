@@ -35,3 +35,12 @@ jobs:
       - run: bun run lint
       - run: bun run typecheck
       - run: bun test
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Build-only: verifies the runner image assembles and the entrypoint
+      # resolves. No registry push until there is a deployment target.
+      - run: docker build -t understory .
+      - run: docker run --rm understory understory-bench --help

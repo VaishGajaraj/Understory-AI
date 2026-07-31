@@ -1,0 +1,15 @@
+.git
+.github
+.venv
+node_modules
+apps
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+.import_linter_cache
+data
+benchmarks/*/data
+benchmarks/*/reports
+UNDERSTORY AI Docs
+*.zarr
+*.h5

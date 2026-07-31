@@ -28,6 +28,7 @@ from understory_core.discovery import (
     search_gunw_pairs,
     single_cycle_pairs,
 )
+from understory_core.logutil import setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +110,9 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help=f"Exit {EXIT_NEW_COVERAGE} when new coverage appears (for cron alerting)",
     )
+    parser.add_argument("-v", "--verbose", action="count", default=0)
     args = parser.parse_args(argv)
+    setup_logging(args.verbose)
 
     aoi = AreaOfInterest.from_yaml(args.aoi)
     state_path = args.state or Path(".understory") / f"watch-{aoi.name}-{args.tier}.json"
