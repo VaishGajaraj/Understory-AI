@@ -11,6 +11,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+from asf_search.exceptions import ASFSearchError
 from understory_core.aoi import AreaOfInterest
 from understory_core.discovery import (
     GUNW_COLLECTIONS,
@@ -21,6 +22,7 @@ from understory_core.discovery import (
     single_cycle_pairs,
     summarize_coverage,
 )
+from understory_core.logutil import setup_logging
 from understory_core.stack import CoherenceStack
 
 from understory_detect.cli import main as benchmark_main
@@ -161,6 +163,7 @@ def main(argv: list[str] | None = None) -> int:
         prog="understory",
         description="Discover NISAR coverage, verify prerequisites, and run Understory benchmarks.",
     )
+    parser.add_argument("-v", "--verbose", action="count", default=0)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     doctor_parser = subparsers.add_parser("doctor", help="Check local prerequisites")
@@ -205,6 +208,7 @@ def main(argv: list[str] | None = None) -> int:
     run_parser.add_argument("config", type=Path, help="Path to benchmark config.yaml")
 
     args = parser.parse_args(argv)
+    setup_logging(getattr(args, "verbose", 0) or 1)
     if args.command == "doctor":
         result = doctor(
             earthdata_path=args.earthdata_netrc,
@@ -270,7 +274,14 @@ def main(argv: list[str] | None = None) -> int:
                 resolution_m=args.resolution_m,
                 polarization=args.polarization,
             )
-        except (FileNotFoundError, KeyError, OSError, RuntimeError, ValueError) as error:
+        except (
+            FileNotFoundError,
+            KeyError,
+            OSError,
+            RuntimeError,
+            ValueError,
+            ASFSearchError,
+        ) as error:
             print(f"build-stack failed: {error}", file=sys.stderr)
             return 2
         track, frame, direction = frame_key

@@ -283,7 +283,7 @@ def summarize_coverage(pairs: list[GunwPair], tier: str) -> dict[str, Any]:
     The summary is intentionally independent of terminal formatting so other
     tools can use archive discovery without scraping ``probe_archive.py``.
     """
-    usable = single_cycle_pairs(pairs)
+    usable = dedupe_pairs(single_cycle_pairs(pairs))
     frames: list[dict[str, Any]] = []
     for (track, frame, direction), frame_pairs in sorted(group_by_frame(usable).items()):
         frames.append(

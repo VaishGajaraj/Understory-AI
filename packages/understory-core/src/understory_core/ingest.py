@@ -153,6 +153,7 @@ def fetch_granule(
         policy=policy,
         session=session,
     )
+    _require_hdf5(target)
     manifest.record(
         GranuleRecord(
             granule_id=pair.granule_id,
@@ -169,6 +170,29 @@ def fetch_granule(
         )
     )
     return result.path
+
+
+HDF5_SIGNATURE = b"\x89HDF\r\n\x1a\n"
+
+
+def _require_hdf5(path: Path) -> None:
+    """Refuse to record a payload that is not an HDF5 file.
+
+    An Earthdata URS login page or a not-yet-accepted EULA page arrives as
+    200 + HTML with a self-consistent Content-Length — when the catalog
+    carries no size or MD5, nothing else would catch it, and the manifest
+    would remember the junk as permanently intact. The 8-byte signature
+    check is the last, cheapest truncation-and-imposter guard.
+    """
+    with open(path, "rb") as f:
+        signature = f.read(len(HDF5_SIGNATURE))
+    if signature != HDF5_SIGNATURE:
+        path.unlink(missing_ok=True)
+        raise ValueError(
+            f"{path.name}: payload is not HDF5 (starts {signature!r}) — usually an "
+            "Earthdata login or EULA page; check ~/.netrc and dataset authorization "
+            "(docs/DATA_ACCESS.md), then re-run"
+        )
 
 
 def fetch_granules(

@@ -295,9 +295,12 @@ def test_time_axis_is_monotonic_under_mixed_temporal_baselines(tmp_path):
     assert np.all(np.diff(times) > np.timedelta64(0, "ns")), [str(t)[:10] for t in times]
 
 
-def test_duplicate_midpoints_are_rejected(tmp_path):
-    with pytest.raises(ValueError, match="share midpoint"):
-        build_with([dated_pair(0, 12), dated_pair(0, 12)], tmp_path)
+def test_duplicate_midpoints_are_deduped_not_rejected(tmp_path):
+    """Coverage-variant granules of the same pair are collapsed by
+    dedupe_pairs before stacking (one timestep results), rather than
+    aborting the build — the archive publishes such variants routinely."""
+    stack = build_with([dated_pair(0, 12), dated_pair(0, 12)], tmp_path)
+    assert stack.coherence.sizes["time"] == 1
 
 
 def test_edge_granule_on_the_same_lattice_is_reindexed_not_rejected():
@@ -510,3 +513,58 @@ def test_resume_refuses_a_marker_with_a_scalar_frame_key(tmp_path):
 
     with pytest.raises(ValueError, match="was built for frame"):
         build_with(pairs, tmp_path)
+
+
+def test_build_survives_sub_day_midpoint_jitter(tmp_path, aoi):
+    """Real GUNW midpoints carry sub-day (even half-second) components — the
+    12-day repeat is exact to minutes, not timestamps. Letting xarray infer
+    'days since ...' time units from the first appended step corrupted the
+    axis on the first append and crashed the second. The encoding is pinned
+    to microseconds since epoch; this asserts an exact roundtrip."""
+    import pandas as pd
+
+    n_rows, n_cols = 20, 20
+    lons = np.linspace(-55.03, -54.97, n_cols)
+    lats = np.linspace(-6.98, -7.02, n_rows)
+    cache = tmp_path / "granules"
+    cache.mkdir()
+
+    pairs = []
+    windows = [
+        ("2026-06-20T23:17:03", "2026-07-02T23:17:02"),  # 12 d minus 1 s -> .5 s midpoint
+        ("2026-07-02T23:17:10", "2026-07-14T23:16:55"),
+        ("2026-07-14T23:17:21", "2026-07-26T23:17:08"),
+    ]
+    for i, (ref, sec) in enumerate(windows):
+        gid = f"jitter-{i}"
+        path = cache / f"{gid}.h5"
+        make_geographic_gunw(
+            path,
+            coherence=np.full((n_rows, n_cols), 0.6, dtype=np.float32),
+            lons=lons,
+            lats=lats,
+        )
+        pair = make_pair(gid, ref, sec)
+        pairs.append(pair)
+        IngestManifest.for_cache(cache).record(
+            GranuleRecord(
+                granule_id=pair.granule_id,
+                calibration_tier=pair.calibration_tier,
+                track=pair.track,
+                frame=pair.frame,
+                reference_start=pair.reference_start,
+                secondary_start=pair.secondary_start,
+                path=path,
+                size_bytes=path.stat().st_size,
+                completed_at=utcnow(),
+            )
+        )
+
+    store = tmp_path / "jitter.zarr"
+    built = CoherenceStack.build(aoi, pairs, store, cache_dir=cache)
+    assert built.coherence.sizes["time"] == 3
+
+    reopened = CoherenceStack.open(store, aoi)
+    expected = [pd.Timestamp(p.midpoint) for p in pairs]
+    actual = [pd.Timestamp(t) for t in reopened.coherence.time.values]
+    assert actual == expected  # exact roundtrip, no truncation to whole days

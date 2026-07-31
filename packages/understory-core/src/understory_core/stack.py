@@ -16,7 +16,7 @@ from shapely.geometry import mapping
 from shapely.ops import transform as shapely_transform
 
 from understory_core.aoi import AreaOfInterest
-from understory_core.discovery import GunwPair
+from understory_core.discovery import GunwPair, dedupe_pairs
 from understory_core.ingest import extract_coherence
 
 logger = logging.getLogger(__name__)
@@ -100,7 +100,7 @@ class CoherenceStack:
                 "tiers can resemble landscape change, so build a separate stack per tier"
             )
 
-        ordered = sorted(pairs, key=lambda pair: pair.midpoint)
+        ordered = sorted(dedupe_pairs(pairs), key=lambda pair: pair.midpoint)
         midpoints = cast("list[pd.Timestamp]", [pd.Timestamp(pair.midpoint) for pair in ordered])
         duplicates = {timestamp for timestamp in midpoints if midpoints.count(timestamp) > 1}
         if duplicates:
@@ -164,7 +164,16 @@ class CoherenceStack:
             step.attrs = attrs
             if index == 0:
                 store_path.parent.mkdir(parents=True, exist_ok=True)
-                step.to_zarr(store_path, mode="w")
+                # Pin the time encoding: real GUNW midpoints carry sub-day
+                # (even half-second) components, and letting xarray infer
+                # "days since ..." units from the first step corrupts the
+                # axis on append #1 and crashes on append #2. Microseconds
+                # since epoch represents every midpoint exactly.
+                step.to_zarr(
+                    store_path,
+                    mode="w",
+                    encoding={"time": {"units": "microseconds since 1970-01-01", "dtype": "int64"}},
+                )
             else:
                 step.to_zarr(store_path, mode="a", append_dim="time")
             _write_marker(

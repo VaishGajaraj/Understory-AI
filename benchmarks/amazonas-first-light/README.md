@@ -36,7 +36,8 @@ uv run python scripts/probe_archive.py benchmarks/amazonas-first-light/aoi.yaml 
 # 2. Build the frozen stack (3 unique pairs after coverage-variant dedup; expect a few GB of download)
 uv run understory build-stack benchmarks/amazonas-first-light/aoi.yaml \
     --out data/scratch/amazonas-first-light.zarr \
-    --tier provisional --track 89 --frame 175 --direction ASCENDING
+    --tier provisional --track 89 --frame 175 --direction ASCENDING \
+    --min-pairs 3  # 3 pairs exist today; nothing is scoreable until ~4 prior pairs
 
 # 3. Detect + report
 uv run understory-bench benchmarks/amazonas-first-light/config.yaml -v

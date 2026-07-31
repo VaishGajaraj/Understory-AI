@@ -1,6 +1,7 @@
 # First-light run: engineering shakeout + undisturbed-forest coherence
 # baseline on the first stackable Amazon provisional series (track 89,
-# frame 175, ascending — 6 consecutive 12-day pairs from 2026-06-17).
+# frame 175, ascending — 3 consecutive 12-day pairs, references 2026-06-20,
+# 07-02, 07-14; 6 granules before coverage-variant dedup; growing ~2/month).
 #
 # NOT a scored benchmark: the label collection is empty because no ground
 # truth exists here. Expected verdict: INSUFFICIENT_DATA on every kill
