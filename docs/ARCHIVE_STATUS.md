@@ -63,11 +63,16 @@ went from empty to **24,134 granules globally, 585 over the Amazon basin**,
 spanning acquisitions 2026-06-17 → 2026-07-15. Validated V1 remains empty;
 BETA is static (~10,220).
 
-- **First stackable Amazon forest series**: track 89 frame 175 ascending —
-  6 consecutive 12-day pairs over closed-canopy western Amazonas. The
-  `benchmarks/amazonas-first-light` run targets it.
-- Track 46 frames 1–2 (Amazon mouth) also carry 6 pairs each; mixed
-  land/water — less useful for the forest baseline.
+- **First stackable Amazon forest series**: track 89 frames 174–176
+  ascending — 3 consecutive 12-day pairs each (2026-06-20 → 07-26) over
+  closed-canopy western Amazonas. The `benchmarks/amazonas-first-light` run
+  targets frame 175. (An earlier count said 6: that counted coverage-variant
+  granules, not unique pairs.)
+- Two archive facts this probe forced into the code: integer-truncated
+  temporal baselines read 11 days for half the archive's genuine 12-day
+  pairs (fixed: rounded from seconds), and the same pair ships as full- and
+  partial-coverage granule variants (fixed: date-keyed dedup preferring
+  full coverage).
 - **Pará benchmark AOI has its first coverage**: 2 provisional 12-day pairs
   (tracks 103 and 111, one each). Not stackable yet; at mission cadence the
   8-pair baseline window fills around October 2026. `understory-watch

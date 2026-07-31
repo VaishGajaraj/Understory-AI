@@ -1,9 +1,12 @@
 # amazonas-first-light — the first real-data run
 
-The first Amazon forest frame with a stackable calibrated series: **track 89,
-frame 175, ascending**, six consecutive 12-day provisional pairs starting
-2026-06-17, over closed-canopy moist forest in western Amazonas (Juruá/Jutaí
-interfluve).
+The first Amazon forest frames with a stackable calibrated series: **track 89,
+frames 174-176, ascending** — three consecutive 12-day provisional pairs each
+(references 2026-06-20, 07-02, 07-14) over closed-canopy moist forest in
+western Amazonas (Juruá/Jutaí interfluve). The series grows by ~2 pairs/month;
+the default baseline window (min 4 prior pairs) becomes scoreable around
+late August 2026. Measured with corrected pair physics — an earlier note
+claimed six pairs by counting coverage-variant granules, not unique pairs.
 
 This is an engineering shakeout, not a scored benchmark. There are no labels
 here; every kill criterion will honestly read `INSUFFICIENT_DATA`. What it
@@ -30,7 +33,7 @@ machine urs.earthdata.nasa.gov login <username> password <password>
 # 1. Confirm the series is still there (no credentials needed)
 uv run python scripts/probe_archive.py benchmarks/amazonas-first-light/aoi.yaml --tier provisional
 
-# 2. Build the frozen stack (~6 granules, expect a few GB of download)
+# 2. Build the frozen stack (3 unique pairs after coverage-variant dedup; expect a few GB of download)
 uv run understory build-stack benchmarks/amazonas-first-light/aoi.yaml \
     --out data/scratch/amazonas-first-light.zarr \
     --tier provisional --track 89 --frame 175 --direction ASCENDING

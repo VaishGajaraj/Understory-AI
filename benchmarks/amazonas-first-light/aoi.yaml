@@ -2,8 +2,9 @@ name: amazonas-first-light
 description: >
   ~55 x 55 km box of closed-canopy moist forest in western Amazonas state
   (Jurua/Jutai interfluve), inside NISAR track 89 frame 175 ascending — the
-  first Amazon forest frame to accumulate a stackable provisional series
-  (6 consecutive 12-day pairs, June-July 2026). Purpose: engineering shakeout
+  first Amazon forest frames to accumulate a stackable provisional series
+  (3 consecutive 12-day pairs each on track 89 frames 174-176, June-July
+  2026, growing ~2/month). Purpose: engineering shakeout
   and undisturbed-forest coherence baseline characterization. NOT a scored
   benchmark: no ground-truth labels exist here; kill criteria will read
   INSUFFICIENT_DATA, and that is the honest output.

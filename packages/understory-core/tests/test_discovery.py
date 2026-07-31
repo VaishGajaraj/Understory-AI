@@ -155,3 +155,31 @@ def test_missing_checksum_is_none_not_an_error():
         ).md5
         is None
     ), "a non-MD5 algorithm must not be passed off as an MD5"
+
+
+def test_baseline_rounds_across_day_boundary():
+    """A 12-day repeat whose secondary starts minutes earlier in the day
+    truncates to 11 with timedelta.days — the archive does this constantly,
+    and truncation silently discarded half the usable pairs."""
+    pair = make_pair(89, 175, "2026-06-20T23:50:00", "2026-07-02T23:35:00")
+    assert (pair.secondary_start - pair.reference_start).days == 11  # the trap
+    assert pair.temporal_baseline_days == 12  # the fix
+
+
+def test_dedupe_prefers_full_coverage_then_latest():
+    from understory_core.discovery import dedupe_pairs
+
+    def variant(granule_id: str):
+        p = make_pair(89, 175, "2026-06-20T09:00", "2026-07-02T09:00")
+        object.__setattr__(p, "granule_id", granule_id)
+        return p
+
+    partial = variant("NISAR_L2_PR_GUNW_x_X05010_N_P_J_001")
+    full_old = variant("NISAR_L2_PR_GUNW_x_X05010_N_F_J_001")
+    full_new = variant("NISAR_L2_PR_GUNW_x_X05010_N_F_J_002")
+    other_pair = make_pair(89, 175, "2026-07-02T09:00", "2026-07-14T09:00")
+
+    kept = dedupe_pairs([partial, full_old, full_new, other_pair])
+    assert len(kept) == 2
+    assert kept[0].granule_id == "NISAR_L2_PR_GUNW_x_X05010_N_F_J_002"
+    assert kept[1] == other_pair

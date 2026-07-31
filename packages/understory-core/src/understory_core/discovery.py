@@ -58,7 +58,16 @@ class GunwPair:
 
     @property
     def temporal_baseline_days(self) -> int:
-        return (self.secondary_start - self.reference_start).days
+        """Temporal baseline in whole days, rounded from seconds.
+
+        Learned from the live archive: the 12-day repeat is exact to minutes,
+        not to timestamps — a secondary pass starting minutes earlier in the
+        day crosses a date boundary and timedelta.days truncates to 11, which
+        silently discarded roughly half the usable pairs. Round, never
+        truncate.
+        """
+        delta = self.secondary_start - self.reference_start
+        return round(delta.total_seconds() / 86_400)
 
     @property
     def frame_key(self) -> tuple[int, int, str]:
@@ -240,6 +249,32 @@ def single_cycle_pairs(pairs: list[GunwPair]) -> list[GunwPair]:
     in the v0 time series.
     """
     return [p for p in pairs if p.temporal_baseline_days == REPEAT_CYCLE_DAYS]
+
+
+def dedupe_pairs(pairs: list[GunwPair]) -> list[GunwPair]:
+    """One granule per (frame, reference, secondary) interferometric pair.
+
+    The archive publishes the same pair more than once — full- vs
+    partial-frame coverage variants and reprocessed production counters.
+    Stacking both would insert duplicate timesteps. Preference: full-frame
+    coverage (scene-name coverage flag 'F' over 'P'), then the
+    lexicographically latest granule id (production counter and CRID sort
+    upward).
+    """
+    best: dict[tuple, GunwPair] = {}
+    for pair in pairs:
+        # Date-level key: same-day acquisitions of one frame are one pass
+        # (slice timestamps differ by seconds between coverage variants).
+        key = (pair.frame_key, pair.reference_start.date(), pair.secondary_start.date())
+        incumbent = best.get(key)
+        if incumbent is None or _dedupe_rank(pair) > _dedupe_rank(incumbent):
+            best[key] = pair
+    return sorted(best.values(), key=lambda p: (p.frame_key, p.reference_start))
+
+
+def _dedupe_rank(pair: GunwPair) -> tuple[int, str]:
+    full_coverage = 1 if "_N_F_" in pair.granule_id else 0
+    return (full_coverage, pair.granule_id)
 
 
 def summarize_coverage(pairs: list[GunwPair], tier: str) -> dict[str, Any]:

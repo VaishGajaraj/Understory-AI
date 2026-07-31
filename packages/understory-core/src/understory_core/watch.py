@@ -24,6 +24,7 @@ from pydantic import BaseModel, Field
 from understory_core.aoi import AreaOfInterest
 from understory_core.discovery import (
     GunwPair,
+    dedupe_pairs,
     group_by_frame,
     search_gunw_pairs,
     single_cycle_pairs,
@@ -76,7 +77,7 @@ def check(
     Returns (new 12-day pairs, updated state). The state update is pure — the
     caller decides when to persist it.
     """
-    pairs = single_cycle_pairs(search_fn(aoi, start=start, end=end, tier=state.tier))
+    pairs = dedupe_pairs(single_cycle_pairs(search_fn(aoi, start=start, end=end, tier=state.tier)))
     new = [p for p in pairs if p.granule_id not in state.seen_granules]
     updated = state.model_copy(
         update={

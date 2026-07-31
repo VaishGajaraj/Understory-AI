@@ -15,6 +15,7 @@ from understory_core.aoi import AreaOfInterest
 from understory_core.discovery import (
     GUNW_COLLECTIONS,
     GunwPair,
+    dedupe_pairs,
     group_by_frame,
     search_gunw_pairs,
     single_cycle_pairs,
@@ -134,7 +135,7 @@ def _select_frame(
     frame: int | None,
     direction: str | None,
 ) -> tuple[tuple[int, int, str], list[GunwPair], bool]:
-    grouped = group_by_frame(single_cycle_pairs(pairs))
+    grouped = group_by_frame(dedupe_pairs(single_cycle_pairs(pairs)))
     if not grouped:
         raise ValueError("no usable 12-day GUNW frame series found")
     if track is None:
