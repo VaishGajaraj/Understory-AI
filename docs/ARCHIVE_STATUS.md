@@ -55,3 +55,21 @@ calibration tiers, and final benchmark results must be rerun on validated produc
 3. Freeze the product identity before any exploratory benchmark.
 4. Treat all BETA-derived behavior as engineering evidence only.
 5. Revalidate every published result on validated V1.
+
+## Update — 2026-07-31
+
+The provisional (calibrated) tier arrived: `NISAR_L2_GUNW_PROVISIONAL_V1`
+went from empty to **24,134 granules globally, 585 over the Amazon basin**,
+spanning acquisitions 2026-06-17 → 2026-07-15. Validated V1 remains empty;
+BETA is static (~10,220).
+
+- **First stackable Amazon forest series**: track 89 frame 175 ascending —
+  6 consecutive 12-day pairs over closed-canopy western Amazonas. The
+  `benchmarks/amazonas-first-light` run targets it.
+- Track 46 frames 1–2 (Amazon mouth) also carry 6 pairs each; mixed
+  land/water — less useful for the forest baseline.
+- **Pará benchmark AOI has its first coverage**: 2 provisional 12-day pairs
+  (tracks 103 and 111, one each). Not stackable yet; at mission cadence the
+  8-pair baseline window fills around October 2026. `understory-watch
+  benchmarks/amazon-para/aoi.yaml --tier provisional --fail-on-new` is the
+  trigger.

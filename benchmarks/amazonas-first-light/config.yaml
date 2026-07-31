@@ -1,0 +1,26 @@
+# First-light run: engineering shakeout + undisturbed-forest coherence
+# baseline on the first stackable Amazon provisional series (track 89,
+# frame 175, ascending — 6 consecutive 12-day pairs from 2026-06-17).
+#
+# NOT a scored benchmark: the label collection is empty because no ground
+# truth exists here. Expected verdict: INSUFFICIENT_DATA on every kill
+# criterion. The deliverables are (1) the pipeline surviving real granules
+# and (2) the per-pixel coherence distribution of intact closed-canopy
+# forest at L-band 12-day repeat — the noise floor every detector fights.
+name: amazonas-first-light
+aoi: aoi.yaml
+start: "2026-06-17"
+end: "2026-12-31"
+detector: v0-filters
+detector_config:
+  baseline:
+    window_pairs: 8
+    min_history_pairs: 4
+    anomaly_sigma: 3.0
+  filters:
+    min_persistence_pairs: 2
+    min_cluster_pixels: 12
+    min_linearity: 0.0
+labels: ../../packages/understory-labels/data/events/amazonas-first-light.geojson
+stack_store: ../../data/scratch/amazonas-first-light.zarr
+report_out: reports/amazonas-first-light.json

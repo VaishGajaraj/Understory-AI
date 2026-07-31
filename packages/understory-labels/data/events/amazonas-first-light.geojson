@@ -1,0 +1,5 @@
+{
+  "type": "FeatureCollection",
+  "description": "Intentionally empty: the amazonas-first-light run is an engineering shakeout over intact forest with no documented disturbance events. An empty collection keeps the benchmark harness honest — every kill criterion reads INSUFFICIENT_DATA rather than a fabricated pass. Candidate events surfaced by the run get triaged here (status: candidate) only with evidence per CONTRIBUTING.md.",
+  "features": []
+}
