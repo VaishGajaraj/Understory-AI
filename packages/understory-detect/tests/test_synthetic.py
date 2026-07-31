@@ -69,3 +69,13 @@ def test_fill_fraction_dilutes_coherence_drop():
     ds = generate_scene(scene)
     cy = cx = int(0.5 * (scene.n_pixels - 1))
     assert float(ds.coherence.values[6, cy, cx]) > 0.45
+
+
+def test_edge_clipped_footprint_has_no_duplicate_pixels():
+    """Clipping at the grid edge must not double-count cells — label areas
+    are derived from the index count."""
+    from understory_detect.synthetic import _footprint
+
+    edge = PlantedDisturbance(id="e", shape="line", center=(0.02, 0.02), size_px=20, width_px=2)
+    ys, xs = _footprint(edge, 100)
+    assert len(ys) == len(set(zip(ys.tolist(), xs.tolist(), strict=True)))

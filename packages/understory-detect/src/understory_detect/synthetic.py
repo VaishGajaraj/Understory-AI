@@ -157,7 +157,12 @@ def truth_features(config: SceneConfig) -> list[dict]:
 
 
 def _footprint(disturbance: PlantedDisturbance, n: int) -> tuple[np.ndarray, np.ndarray]:
-    """Pixel indices (ys, xs) covered by a disturbance."""
+    """Pixel indices (ys, xs) covered by a disturbance, deduplicated.
+
+    Clipping at the grid edge folds out-of-range indices onto the boundary,
+    which would otherwise list the same cell twice — harmless when painting,
+    but truth_features derives label areas from the index count, and a
+    double-counted edge cell inflates area_ha."""
     cy = int(disturbance.center[1] * (n - 1))
     cx = int(disturbance.center[0] * (n - 1))
     half = disturbance.size_px // 2
@@ -167,14 +172,19 @@ def _footprint(disturbance: PlantedDisturbance, n: int) -> tuple[np.ndarray, np.
         steps = np.arange(-half, disturbance.size_px - half)
         ys = np.clip(cy + steps, 0, n - width)
         xs = np.clip(cx + steps, 0, n - 1)
-        return (
+        return _unique(
             np.concatenate([ys + dy for dy in range(width)]),
             np.concatenate([xs for _ in range(width)]),
         )
     # blob: square patch
     side = np.arange(-half, disturbance.size_px - half)
     yy, xx = np.meshgrid(np.clip(cy + side, 0, n - 1), np.clip(cx + side, 0, n - 1))
-    return yy.ravel(), xx.ravel()
+    return _unique(yy.ravel(), xx.ravel())
+
+
+def _unique(ys: np.ndarray, xs: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    flat = np.unique(np.stack([ys, xs], axis=1), axis=0)
+    return flat[:, 0], flat[:, 1]
 
 
 # The toy benchmark's scene: one persistent ~2 km road, one transient rain blob.
