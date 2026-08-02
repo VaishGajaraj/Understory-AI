@@ -15,6 +15,7 @@ detector_config:
     min_persistence_pairs: 2
     min_cluster_pixels: 12
     min_linearity: 0.0
+    max_scene_fraction: 0.10
 labels: ../../packages/understory-labels/data/events/eastern-woodland-controlled.geojson
 stack_store: ../../data/scratch/eastern-woodland.zarr
 report_out: reports/eastern-woodland.json

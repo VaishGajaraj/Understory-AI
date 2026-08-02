@@ -15,6 +15,7 @@ detector_config:
     min_persistence_pairs: 2
     min_cluster_pixels: 12
     min_linearity: 0.0
+    max_scene_fraction: 0.10
 labels: ../../packages/understory-labels/data/events/amazon-mining.geojson
 stack_store: ../../data/scratch/amazon-mining.zarr
 report_out: reports/amazon-mining.json

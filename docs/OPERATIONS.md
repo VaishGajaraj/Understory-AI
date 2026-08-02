@@ -59,6 +59,30 @@ Each run writes:
 Artifacts are written atomically. A report records the configuration hash, application, software
 version, generation time, and available stack provenance.
 
+## 5b. Watch an AOI for new coverage
+
+```
+uv run understory-watch benchmarks/amazon-para/aoi.yaml --fail-on-new
+```
+
+One JSON state file per (AOI, tier) under `.understory/`; exit 0 = nothing
+new, exit 10 = new 12-day pairs appeared (suppressed on the first,
+baseline-recording run). Cron pattern: run daily with `--fail-on-new` and
+alert on exit 10 — that is the signal to rebuild the stack and rerun
+detection. Counts are deduplicated across coverage-variant granules, so
+watch, inventory, and build agree.
+
+## 5c. Containerized runs
+
+```
+docker build -t understory .
+docker run -v $PWD/benchmarks:/app/benchmarks -v ~/.netrc:/root/.netrc:ro \
+    understory understory-bench benchmarks/toy/config.yaml
+```
+
+Credentials are mounted at runtime; nothing secret is baked in. CI builds
+and smoke-runs the image on every push.
+
 ## 6. Automate safely
 
 - Treat exit code `0` as success and `2` as an operator/configuration failure.

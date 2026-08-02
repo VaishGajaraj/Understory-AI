@@ -1,6 +1,6 @@
 # Understory Benchmark Methodology
 
-**Version 0.1.2 (draft)** — this document is versioned alongside the code because, for a benchmark project, the method is the citable artifact. Reviewers must be able to point at a frozen version; results reports record the methodology version they were produced under.
+**Version 0.1.3 (draft)** — this document is versioned alongside the code because, for a benchmark project, the method is the citable artifact. Reviewers must be able to point at a frozen version; results reports record the methodology version they were produced under.
 
 ## 1. Question
 
@@ -16,6 +16,7 @@ Repeat-pass interferometric coherence change detection on NISAR L2 products, 12-
 2. **Persistence filter**: candidate recurs in ≥ 2 consecutive pairs.
 3. **Spatial clustering**: connected components ≥ 12 pixels.
 4. **Geometry**: linearity/elongation score reported per event; threshold disabled by default in v0.
+5. **Scene guard**: when more than `max_scene_fraction` (default 10%) of scored pixels goes anomalous in one pass, the pass is suppressed wholesale as environmental (rain, soil moisture, ionosphere) before persistence filtering — the diffuse-vs-bounded separation enforced without weather data. A genuine disturbance persisting into clean later passes still confirms there.
 
 All thresholds are serialized in benchmark config files and copied into reports. Code defaults
 exist only to make detector construction ergonomic; a publishable benchmark uses the frozen config.
@@ -53,6 +54,8 @@ Known v0 synthetic bounds (`scripts/size_sweep.py`, now swept by width and sub-p
 - **Latency floor**: the 12-day revisit is a hard floor on detection latency; the project never promises faster than the physics allows.
 
 ## Changelog
+
+- **0.1.3** (2026-08): document the scene-wide anomaly guard as detector stage 5; `max_scene_fraction` joins the serialized thresholds in every benchmark config; comparison-baseline plan (optical alert record + Sentinel-1 coherence) recorded in RESEARCH.md.
 
 - **0.1.2** (2026-07): explicitly select the 20 m coherence grid; preserve raster CRS through detection and export alert geometry as EPSG:4326; serialize detector thresholds in benchmark configs and reports.
 - **0.1.1** (2026-07): document forest/terrain mask join; reports include mean match IoU and a Markdown twin.

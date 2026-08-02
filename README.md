@@ -12,6 +12,8 @@ This project is scoped as a question, not a platform:
 
 Nobody knows the answer on real NISAR data yet. We intend to publish it, favorable or not.
 
+**Understory is research first**: a reproducible methods-plus-benchmark contribution — the framework for separating anthropogenic disturbance from natural decorrelation in L-band coherence time series, an openly versioned ground-truth library, and machine-generated results a reviewer can re-run. The publication plan (venues, positioning, reviewer defenses) lives in [docs/RESEARCH.md](docs/RESEARCH.md). If you use the benchmark, harness, or labels, cite via [CITATION.cff](CITATION.cff).
+
 ## Repository layout
 
 This is a monorepo. Python packages carry the science and pipeline (the MVP); TypeScript carries the viewer and any web-facing layers.

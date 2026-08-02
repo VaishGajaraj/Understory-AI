@@ -16,6 +16,7 @@ detector_config:
     min_persistence_pairs: 2
     min_cluster_pixels: 12
     min_linearity: 0.0
+    max_scene_fraction: 0.10
 labels: ../../packages/understory-labels/data/events/toy-fixtures.geojson
 stack_store: data/toy-stack.zarr # generated: uv run python scripts/make_toy_stack.py
 report_out: reports/toy.json

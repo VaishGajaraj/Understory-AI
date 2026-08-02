@@ -4,7 +4,7 @@ The product's heartbeat while the archive backfills, and the substrate of the
 future alert subscription: run it from cron, and the day a watched frame gains
 new pairs you know to rebuild the stack and rerun detection.
 
-    uv run understory-watch benchmarks/amazon-para/aoi.yaml
+    uv run understory-watch benchmarks/amazon-para/aoi.yaml --fail-on-new
     uv run understory-watch aoi.yaml --state .understory/para.json --fail-on-new
 
 State is one small JSON file per watch: the set of granule ids already seen.
@@ -42,7 +42,7 @@ class WatchState(BaseModel):
     """Everything the watcher remembers between runs."""
 
     aoi_name: str
-    tier: str = "beta"
+    tier: str = "provisional"
     seen_granules: set[str] = Field(default_factory=set)
     last_checked: str | None = None  # ISO datetime of the previous run
 
@@ -104,7 +104,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("aoi", type=Path, help="Path to an AOI yaml")
     parser.add_argument("--state", type=Path, default=None, help="State file (JSON)")
-    parser.add_argument("--tier", default="beta", choices=["beta", "provisional", "validated"])
+    parser.add_argument(
+        "--tier", default="provisional", choices=["beta", "provisional", "validated"]
+    )
     parser.add_argument("--start", default="2025-07-01", help="ISO date search window start")
     parser.add_argument(
         "--fail-on-new",

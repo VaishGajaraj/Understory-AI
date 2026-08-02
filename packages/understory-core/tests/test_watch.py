@@ -77,7 +77,7 @@ def test_state_roundtrip(tmp_path):
         aoi_name="watch-test", seen_granules={"g1"}, last_checked="2026-07-01T00:00:00"
     )
     state.save(state_path)
-    loaded = WatchState.load(state_path, "watch-test", "beta")
+    loaded = WatchState.load(state_path, "watch-test", "provisional")
     assert loaded == state
 
 
@@ -87,4 +87,4 @@ def test_state_refuses_mismatched_watch(tmp_path):
     state_path = tmp_path / "watch.json"
     WatchState(aoi_name="other-aoi").save(state_path)
     with pytest.raises(ValueError, match="one state file per watch"):
-        WatchState.load(state_path, "watch-test", "beta")
+        WatchState.load(state_path, "watch-test", "provisional")

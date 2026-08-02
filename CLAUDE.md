@@ -15,7 +15,7 @@ An open benchmark answering one question: **can NISAR L-band coherence detect do
 ## Commands (uniform verbs, see Makefile)
 
 ```
-make fmt / lint / typecheck / test / check   # check = what CI runs
+make fmt / lint / typecheck / test / check   # check = the core of what CI runs (CI adds format-check, label validation, toy-bench, docker)
 make py-test                                  # Python only (uv run pytest)
 make toy-bench                                # toy benchmark end-to-end
 make load-test / load-test-full               # capacity; exit status is the ship call

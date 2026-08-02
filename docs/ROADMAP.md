@@ -19,14 +19,15 @@ Honest sequencing for the **open** NISAR forest-degradation benchmark. Dates are
 - [x] Synthetic NISAR-scale capacity/SLO harness and a local report/alert review viewer
 - [x] Production and NISAR opportunity strategy grounded in official product boundaries
 
-## Now (unblocks a real published number)
+## Now (the research ladder — see [RESEARCH.md](RESEARCH.md))
 
-1. **One-pair PROVISIONAL smoke test** — the 30 July probe found current 12-day products in every benchmark AOI. Run one through extraction, clipping, masking, and GeoJSON export to validate real-data correctness without presenting a benchmark result.
-2. **Archive watch** — poll Pará / eastern-woodland AOIs with `understory inventory` until one fixed forest frame has ≥6 consecutive 12-day pairs.
-3. **Label transcription** — fill `packages/understory-labels/data/events/amazon-para-imazon.geojson` from published Imazon SAD / IBAMA records (external ground truth). Empty scaffolds are placeholders, not claims.
-4. **First real stack** — freeze a track/frame and build a 20 m PROVISIONAL stack; apply forest/terrain masks; run `understory-bench`; treat the report as exploratory.
-5. **Validated-stream re-validation** — mandatory gate once `NISAR_L2_GUNW_V1` fills ([`METHODOLOGY.md`](METHODOLOGY.md) caveats).
-6. **Partner loop** — one NGO / territorial program, free watch area, QGIS alerts GeoJSON, confirm/reject feedback into the label library ([`WORKING_OPEN.md`](WORKING_OPEN.md) §8).
+1. **First-light run** (`benchmarks/amazonas-first-light`) — track 89 frame 175, 3 provisional pairs. Needs only Earthdata creds in `~/.netrc`. Produces the undisturbed-forest coherence noise floor: the first publishable result and the AGU abstract.
+2. **AGU Fall 2026 abstract** — deadline **2026-08-05** (requires joining AGU). Fallback: IGARSS 2027.
+3. **Label transcription toward ≥50 events** — fill `amazon-para-imazon.geojson` from published Imazon SAD / IBAMA records while Pará coverage accumulates (stackable ~October at mission cadence; `understory-watch --fail-on-new` is the trigger). Ground-truth volume is the #1 reviewer kill reason.
+4. **Scored benchmark on provisional** — freeze the Pará frame, build, run, report. Exploratory until validated-tier re-run.
+5. **Comparison baselines** — detection lead vs the optical alert record (shipped in the schema) and a Sentinel-1 C-band coherence detector through the same harness (the #2 reviewer kill reason).
+6. **Validated-stream re-validation + beta/provisional/validated difference table** once `NISAR_L2_GUNW_V1` fills (Q4 2026) — the #3 reviewer kill reason, quantified.
+7. **Partner loop** — one NGO / territorial program, free watch area, QGIS alerts, confirm/reject feedback into the label library.
 
 ## Next (after first real report)
 
