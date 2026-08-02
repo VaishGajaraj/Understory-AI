@@ -31,7 +31,7 @@ machine urs.earthdata.nasa.gov login <username> password <password>
 
 ```bash
 # 1. Confirm the series is still there (no credentials needed)
-uv run python scripts/probe_archive.py benchmarks/amazonas-first-light/aoi.yaml --tier provisional
+uv run understory inventory benchmarks/amazonas-first-light/aoi.yaml --tier provisional
 
 # 2. Build the frozen stack (3 unique pairs after coverage-variant dedup; expect a few GB of download)
 uv run understory build-stack benchmarks/amazonas-first-light/aoi.yaml \

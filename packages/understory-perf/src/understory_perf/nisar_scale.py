@@ -3,7 +3,7 @@
 Every constant here is an observation about the mission or the ASF archive, not
 a tuning knob. They are separated from the workload models so that when the
 archive changes, one file changes. Sources and observation dates are recorded
-in docs/ARCHIVE_STATUS.md; re-derive with ``scripts/probe_archive.py``.
+in docs/ARCHIVE_STATUS.md; re-derive with ``understory inventory``.
 
 This is a sourced reference table, not only a set of live inputs: some constants
 are consumed by the workload models (``REPEAT_CYCLE_DAYS``, ``COHERENCE_POSTING_M``,

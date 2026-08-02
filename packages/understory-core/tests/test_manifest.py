@@ -111,31 +111,6 @@ def test_deep_check_detects_content_corruption(tmp_path):
     assert manifest.intact("G-1", deep=True) is None
 
 
-def test_find_pair_by_identity(tmp_path):
-    manifest = IngestManifest.for_cache(tmp_path)
-    record = make_record(tmp_path)
-    manifest.record(record)
-
-    found = manifest.find_pair(
-        track=99,
-        frame=76,
-        calibration_tier="beta",
-        reference_start=datetime(2025, 11, 5),
-        secondary_start=datetime(2025, 11, 17),
-    )
-    assert found is not None
-    assert found.granule_id == "G-1"
-
-    missing = manifest.find_pair(
-        track=99,
-        frame=76,
-        calibration_tier="beta",
-        reference_start=datetime(2020, 1, 1),
-        secondary_start=datetime(2020, 1, 13),
-    )
-    assert missing is None
-
-
 def test_forget_removes_a_row(tmp_path):
     manifest = IngestManifest.for_cache(tmp_path)
     manifest.record(make_record(tmp_path))

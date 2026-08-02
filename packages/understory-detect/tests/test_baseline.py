@@ -2,7 +2,12 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
-from understory_detect.baseline import BaselineConfig, anomaly_candidates, expected_coherence
+from understory_detect.baseline import (
+    BaselineConfig,
+    anomaly_candidates,
+    anomaly_deficit,
+    expected_coherence,
+)
 
 
 def stack_from(values: np.ndarray) -> xr.DataArray:
@@ -42,7 +47,8 @@ def test_drop_is_flagged_and_noise_rarely_is():
     values = 0.7 + rng.normal(0, 0.05, size=(8, 8, 8))
     values[6:, 1, 1] = 0.15  # sustained crash at one pixel
     stack = stack_from(values)
-    candidates = anomaly_candidates(stack, BaselineConfig(min_history_pairs=4))
+    config = BaselineConfig(min_history_pairs=4)
+    candidates = anomaly_candidates(anomaly_deficit(stack, config), config)
     assert bool(candidates.values[6, 1, 1])
     assert bool(candidates.values[7, 1, 1])
     # Pure-noise pixels exceed 3 robust sigmas at a small rate (the MAD spread
@@ -58,5 +64,6 @@ def test_spread_floor_prevents_hypersensitivity():
     values = np.full((8, 1, 1), 0.7)
     values[-1] = 0.69
     stack = stack_from(values)
-    candidates = anomaly_candidates(stack, BaselineConfig(min_history_pairs=4))
+    config = BaselineConfig(min_history_pairs=4)
+    candidates = anomaly_candidates(anomaly_deficit(stack, config), config)
     assert not candidates.values[-1, 0, 0]

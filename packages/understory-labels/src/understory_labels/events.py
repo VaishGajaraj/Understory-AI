@@ -60,7 +60,14 @@ class DisturbanceEvent(BaseModel):
     @classmethod
     def from_feature(cls, feature: dict) -> DisturbanceEvent:
         props = dict(feature.get("properties") or {})
-        props.pop("schema_version", None)
+        declared = props.pop("schema_version", None)
+        from understory_labels import SCHEMA_VERSION
+
+        if declared != SCHEMA_VERSION:
+            raise ValueError(
+                f"event {props.get('id', '?')}: schema_version {declared!r} != "
+                f"library schema {SCHEMA_VERSION!r} — migrate the record or the library"
+            )
         return cls(geometry=feature["geometry"], **props)
 
 

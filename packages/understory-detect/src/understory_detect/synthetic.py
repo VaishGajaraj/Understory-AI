@@ -26,6 +26,8 @@ from pydantic import BaseModel, Field
 # Shared with the detector's own event extraction: identical lon/lat pixel-area
 # math, kept in one place. events.py is the natural home — it is the pipeline
 # path, synthetic is the fixture generator that mirrors it.
+from understory_labels import SCHEMA_VERSION
+
 from understory_detect.events import _pixel_area_ha
 
 
@@ -140,7 +142,7 @@ def truth_features(config: SceneConfig) -> list[dict]:
                 },
                 "properties": {
                     "id": disturbance.id,
-                    "schema_version": "0.1.0",
+                    "schema_version": SCHEMA_VERSION,
                     "date_window": {
                         "start": str(onset - timedelta(days=12)),
                         "end": str(onset),

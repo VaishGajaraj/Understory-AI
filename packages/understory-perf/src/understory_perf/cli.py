@@ -20,7 +20,6 @@ import json
 import platform
 import subprocess
 import sys
-from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -217,4 +216,4 @@ if __name__ == "__main__":
     sys.exit(main())
 
 
-__all__ = ["ScenarioConfig", "asdict", "main", "run_scenario"]
+__all__ = ["ScenarioConfig", "main", "run_scenario"]

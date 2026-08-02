@@ -9,7 +9,7 @@ Honest sequencing for the **open** NISAR forest-degradation benchmark. Dates are
 - [x] Real NISAR GUNW discovery (`asf_search` + calibration tiers) and first-contact notes ([`ARCHIVE_STATUS.md`](ARCHIVE_STATUS.md))
 - [x] GUNW coherence extraction from HDF5 with local granule cache
 - [x] Kill criteria, calibration table, and synthetic size sweeps as code
-- [x] `CoherenceStack.build` — clip/align/stack pairs → Zarr (`scripts/build_stack.py`)
+- [x] `CoherenceStack.build` — clip/align/stack pairs → Zarr (`understory build-stack`)
 - [x] Forest / terrain / ERA5 join APIs on local rasters (`understory_core.masks`, `scripts/apply_masks.py`)
 - [x] Markdown twin of every machine-readable benchmark report
 - [x] Unified operator CLI for environment diagnostics, JSON archive inventory, and benchmark runs

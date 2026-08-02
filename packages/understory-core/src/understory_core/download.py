@@ -56,10 +56,6 @@ class DownloadError(RuntimeError):
     """A download failed after exhausting its retry budget."""
 
 
-class IntegrityError(DownloadError):
-    """Bytes landed, but they are not the object that was asked for."""
-
-
 class RetryPolicy(BaseModel):
     """How hard to try, and how long to wait between tries.
 

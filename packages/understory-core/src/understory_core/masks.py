@@ -22,6 +22,7 @@ import pandas as pd
 import xarray as xr
 
 from understory_core.aoi import AreaOfInterest
+from understory_core.geodesy import degree_size_meters
 
 # ESA WorldCover v200 class 10 = Tree cover.
 DEFAULT_FOREST_CLASSES: frozenset[int] = frozenset({10})
@@ -220,9 +221,7 @@ def _sample_onto_grid(raster: xr.DataArray, grid: xr.DataArray) -> xr.DataArray:
     target_geographic = target_crs.upper() in ("EPSG:4326", "OGC:CRS84")
     if src_geographic and target_geographic:
         sampled = raster.interp(x=sample_grid["x"], y=sample_grid["y"], method="nearest")
-        return sampled.astype(
-            raster.dtype if np.issubdtype(raster.dtype, np.floating) else raster.dtype
-        )
+        return sampled.astype(raster.dtype)
 
     # Any projected grid: build a template in the target CRS and reproject-match.
     try:
@@ -279,5 +278,6 @@ def _pixel_size_meters(elevation: xr.DataArray) -> tuple[float, float]:
     dy = float(np.abs(np.median(np.diff(y))))
     if _coords_look_geographic(elevation):
         mid_lat = math.radians(float(np.mean(y)))
-        return dy * 110_540, dx * 111_320 * abs(math.cos(mid_lat))
+        lat_m, lon_m = degree_size_meters(math.degrees(mid_lat))
+        return dy * lat_m, dx * lon_m
     return dy, dx

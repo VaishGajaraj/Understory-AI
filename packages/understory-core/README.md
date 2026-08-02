@@ -10,8 +10,8 @@ Application-agnostic NISAR data plumbing. The same code serves a forest in Pará
 - `stack` — `CoherenceStack.build` / `open`: clip pairs to an AOI, align on a common grid, write Zarr
 - `masks` — forest (WorldCover), terrain (DEM slope), and ERA5 weather joins from local inputs
 
-## Scripts (repo root)
+## Command line
 
-- `scripts/probe_archive.py` — coverage / cadence probe (no credentials for search)
-- `scripts/build_stack.py` — discovery → longest frame series → Zarr
-- `scripts/apply_masks.py` — join forest/terrain masks onto an existing stack (`valid` variable)
+- `uv run understory inventory <aoi.yaml> --tier <tier>` — coverage / cadence probe (no credentials for search)
+- `uv run understory build-stack ...` — discovery → frozen frame series → Zarr
+- `scripts/apply_masks.py` (repo root) — join forest/terrain masks onto an existing stack (`valid` variable)

@@ -11,7 +11,7 @@ NISAR L2 products are free and public, distributed by the Alaska Satellite Facil
    ```
 3. Discovery uses `asf_search` (no credentials needed to search; needed to retrieve).
 
-**Run in-region.** The archive is hundreds of terabytes; the pipeline is designed for direct S3 access from a VM in us-west-2, streaming only the coherence layer out of each granule. A download-based workflow punishes every experiment — use it only for spot checks. v0 retrieves full granules into a local content-addressed cache (`scripts/build_stack.py`); S3 range reads remain the production target.
+**Run in-region.** The archive is hundreds of terabytes; the pipeline is designed for direct S3 access from a VM in us-west-2, streaming only the coherence layer out of each granule. A download-based workflow punishes every experiment — use it only for spot checks. v0 retrieves full granules into a local content-addressed cache (`uv run understory build-stack ...`); S3 range reads remain the production target.
 
 **Maturity tiers.** Use `provisional` (`NISAR_L2_GUNW_PROVISIONAL_V1`) for current engineering runs and re-run final results on `validated` (`NISAR_L2_GUNW_V1`) when coverage exists. Do not combine BETA and PROVISIONAL observations in one time series because processor changes can resemble landscape change. Probe with the supported CLI (inventory is anonymous and supports `--json`):
 

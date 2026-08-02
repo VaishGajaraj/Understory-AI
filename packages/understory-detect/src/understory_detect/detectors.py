@@ -14,7 +14,7 @@ import warnings
 from pydantic import BaseModel
 from understory_core.stack import CoherenceStack
 
-from understory_detect.baseline import BaselineConfig, anomaly_deficit
+from understory_detect.baseline import BaselineConfig, anomaly_candidates, anomaly_deficit
 from understory_detect.events import extract_events
 from understory_detect.filters import (
     FilterConfig,
@@ -50,7 +50,7 @@ class V0FilterDetector:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", message="All-NaN slice encountered")
             deficit = anomaly_deficit(coherence, cfg.baseline)
-        candidates = (deficit > cfg.baseline.anomaly_sigma).fillna(False)
+        candidates = anomaly_candidates(deficit, cfg.baseline)
 
         # Optional forest/terrain validity mask joined at stack-build time.
         valid = stack.valid.load() if stack.valid is not None else None

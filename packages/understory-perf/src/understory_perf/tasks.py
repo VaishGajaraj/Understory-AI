@@ -10,8 +10,7 @@ as often as you like: a real 24-pair stack over one frame at 20 m posting means
 ~46 GB of ASF egress and about a day of download, which nobody will re-run per
 commit. The synthetic stack has the same shape, dtype and size as the real one,
 so it exercises the same memory and compute path — what it cannot tell you is
-anything about ASF's throughput, which ``ingest_task`` measures separately
-against real granules when credentials are present.
+anything about ASF's throughput.
 """
 
 from __future__ import annotations
@@ -20,7 +19,6 @@ import resource
 import sys
 import time
 from dataclasses import dataclass, field
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -146,42 +144,6 @@ def detect_task(
         timing.ok = False
         timing.error = f"MemoryError: {exc}"
     except Exception as exc:  # noqa: BLE001 - a crash under load is a result
-        timing.ok = False
-        timing.error = f"{type(exc).__name__}: {exc}"
-    timing.service_seconds = time.perf_counter() - clock
-    timing.peak_rss_bytes = _peak_rss_bytes()
-    return timing
-
-
-def ingest_task(
-    item: WorkItem,
-    granule_path: str,
-    available_at: float,
-) -> StageTiming:
-    """Read the coherence layer out of a GUNW HDF5 on disk.
-
-    Separate from ``detect_task`` because it measures a different bottleneck:
-    HDF5 decompression and disk throughput rather than compute and memory.
-    """
-    from understory_core.ingest import extract_coherence
-
-    path = Path(granule_path)
-    timing = StageTiming(
-        aoi=item.aoi,
-        frame_group=item.frame_group,
-        stage="ingest",
-        n_pairs=1,
-        input_bytes=path.stat().st_size if path.exists() else 0,
-        available_at=available_at,
-        service_start=time.time(),
-        service_seconds=0.0,
-        peak_rss_bytes=0,
-    )
-    clock = time.perf_counter()
-    try:
-        raster = extract_coherence(path)
-        timing.extra = {"shape": list(raster.shape), "crs": raster.attrs.get("crs", "unknown")}
-    except Exception as exc:  # noqa: BLE001
         timing.ok = False
         timing.error = f"{type(exc).__name__}: {exc}"
     timing.service_seconds = time.perf_counter() - clock

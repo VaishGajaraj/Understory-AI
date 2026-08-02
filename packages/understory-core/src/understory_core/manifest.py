@@ -119,35 +119,6 @@ class IngestManifest:
             ).fetchone()
         return _to_record(row)
 
-    def find_pair(
-        self,
-        *,
-        track: int,
-        frame: int,
-        calibration_tier: str,
-        reference_start: datetime,
-        secondary_start: datetime,
-    ) -> GranuleRecord | None:
-        """Look a granule up by the tuple a backfill iterates over.
-
-        Backfill plans are expressed as (track, frame, tier, reference,
-        secondary) — the same pair identity discovery produces — not as granule
-        ids, which nobody holds until after a search.
-        """
-        with self._connect() as conn:
-            row = conn.execute(
-                "SELECT * FROM granules WHERE track = ? AND frame = ? AND calibration_tier = ? "
-                "AND reference_start = ? AND secondary_start = ?",
-                (
-                    track,
-                    frame,
-                    calibration_tier,
-                    reference_start.isoformat(),
-                    secondary_start.isoformat(),
-                ),
-            ).fetchone()
-        return _to_record(row)
-
     def intact(self, granule_id: str, *, deep: bool = False) -> Path | None:
         """The cached path for ``granule_id``, or None if it is not usable.
 

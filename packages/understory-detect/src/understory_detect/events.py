@@ -8,7 +8,6 @@ Components that split or merge across passes are treated as one event — at a
 
 from __future__ import annotations
 
-import math
 from datetime import datetime
 
 import numpy as np
@@ -16,6 +15,7 @@ import xarray as xr
 from pyproj import CRS, Transformer
 from shapely.geometry import MultiPoint, mapping
 from shapely.ops import transform as shapely_transform
+from understory_core.geodesy import pixel_area_ha
 
 from understory_detect.filters import label_components, linearity_score
 
@@ -84,17 +84,8 @@ def extract_events(
 
 
 def _pixel_area_ha(xs: np.ndarray, ys: np.ndarray, crs: str) -> float:
-    """Pixel area in hectares, respecting geographic or projected grid units."""
-    parsed = CRS.from_user_input(crs)
-    if parsed.is_geographic:
-        mid_lat = math.radians(float(np.mean(ys)))
-        dx_m = abs(xs[1] - xs[0]) * 111_320 * math.cos(mid_lat)
-        dy_m = abs(ys[1] - ys[0]) * 110_540
-    else:
-        unit_to_m = parsed.axis_info[0].unit_conversion_factor if parsed.axis_info else 1.0
-        dx_m = abs(xs[1] - xs[0]) * unit_to_m
-        dy_m = abs(ys[1] - ys[0]) * unit_to_m
-    return dx_m * dy_m / 10_000
+    """Pixel area in hectares (shared helper; kept as the module's seam)."""
+    return pixel_area_ha(xs, ys, crs)
 
 
 def _to_wgs84(geometry, crs: str):

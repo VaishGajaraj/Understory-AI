@@ -7,4 +7,6 @@ pipeline monitor on a given machine without falling permanently behind NISAR's
 Nothing in the science packages imports this; it drives them from above.
 """
 
-__version__ = "0.1.0"
+from importlib.metadata import version
+
+__version__ = version("understory-perf")

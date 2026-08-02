@@ -17,14 +17,22 @@ Usage: uv run python scripts/size_sweep.py
 
 from __future__ import annotations
 
+# Pixel area derived from the shared geodesy helper over the default scene
+# grid (~55 m pixels), so the sweep table and event areas cannot drift apart.
+import numpy as np
 from shapely.geometry import shape
 from understory_core.aoi import AreaOfInterest
+from understory_core.geodesy import pixel_area_ha
 from understory_core.stack import CoherenceStack
 from understory_detect.detectors import V0FilterDetector
 from understory_detect.synthetic import PlantedDisturbance, SceneConfig, generate_scene
 
-# ~55 m synthetic pixels -> ~0.305 ha per pixel.
-PIXEL_AREA_HA = 0.305
+_SCENE = SceneConfig()
+PIXEL_AREA_HA = pixel_area_ha(
+    np.linspace(_SCENE.lon_min, _SCENE.lon_max, _SCENE.n_pixels),
+    np.linspace(_SCENE.lat_max, _SCENE.lat_min, _SCENE.n_pixels),
+    "EPSG:4326",
+)
 LENGTHS_PX = [40, 24, 16, 12, 8, 6, 4, 3]
 WIDTHS_PX = [2, 1]
 FILLS = [1.0, 0.5, 0.25]

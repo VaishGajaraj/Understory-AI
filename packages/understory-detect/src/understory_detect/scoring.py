@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 from shapely.geometry import shape
+from understory_core.geodesy import METERS_PER_DEGREE_LAT, METERS_PER_DEGREE_LON
 from understory_labels.events import DisturbanceEvent
 
 from understory_detect.interface import Detection
@@ -21,7 +22,6 @@ class MatchingTolerances(BaseModel):
     """Explicit matching rules — these numbers appear in the methodology doc."""
 
     max_centroid_distance_m: float = 500.0
-    min_spatial_iou: float = 0.0  # v0 matches on distance; IoU reported, not required
     temporal_window_days: int = 36  # +/- 3 repeat cycles around the event window
 
 
@@ -62,7 +62,7 @@ class BenchmarkReport(BaseModel):
     median_lead_over_optical_days: float | None = None
     n_events_with_optical_record: int = 0
     # Mean spatial IoU over matched pairs — reported for honesty; not a match
-    # requirement in v0 (see MatchingTolerances.min_spatial_iou).
+    # requirement in v0; IoU is reported via mean_match_iou, not gated on.
     mean_match_iou: float | None = None
     # Minimum-detectable-size curve: recall per event-area bin, over confirmed
     # labels that carry area_ha. Keys like "0-1", "1-2", "2-5", "5-20", "20+".
@@ -229,8 +229,8 @@ def _distance_m(a, b) -> float:
     import math
 
     lat = math.radians((a.y + b.y) / 2)
-    dx = (a.x - b.x) * 111_320 * math.cos(lat)
-    dy = (a.y - b.y) * 110_540
+    dx = (a.x - b.x) * METERS_PER_DEGREE_LON * math.cos(lat)
+    dy = (a.y - b.y) * METERS_PER_DEGREE_LAT
     return math.hypot(dx, dy)
 
 

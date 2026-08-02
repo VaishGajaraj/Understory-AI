@@ -147,6 +147,10 @@ def anomaly_deficit(stack: xr.DataArray, config: BaselineConfig) -> xr.DataArray
     )
 
 
-def anomaly_candidates(stack: xr.DataArray, config: BaselineConfig) -> xr.DataArray:
-    """Boolean (time, y, x): coherence below the expected envelope."""
-    return (anomaly_deficit(stack, config) > config.anomaly_sigma).fillna(False)
+def anomaly_candidates(deficit: xr.DataArray, config: BaselineConfig) -> xr.DataArray:
+    """Boolean (time, y, x): deficit beyond the envelope (NaN -> False).
+
+    Takes the precomputed deficit so the detector thresholds exactly what it
+    already computed — no second baseline pass, no drift between the two.
+    """
+    return (deficit > config.anomaly_sigma).fillna(False)

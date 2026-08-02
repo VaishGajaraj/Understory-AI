@@ -7,6 +7,6 @@ Each directory is one benchmark: an AOI, a date window, a detector, and a label 
 - [`eastern-woodland/`](eastern-woodland) — instrumented ground-truth sites with controlled disturbances of known date/size/type. Produces the minimum-detectable-event-size curve. Placeholder AOI until a site partner is confirmed.
 - [`amazon-mining/`](amazon-mining) — second config for the same coherence pipeline, focused on artisanal/illegal mining. Config-only until labels exist; does not dilute the Pará logging benchmark.
 
-Real benchmarks need NASA Earthdata credentials — see [docs/DATA_ACCESS.md](../docs/DATA_ACCESS.md). Build stacks with `scripts/build_stack.py`; optionally join forest/terrain masks with `scripts/apply_masks.py`.
+Real benchmarks need NASA Earthdata credentials — see [docs/DATA_ACCESS.md](../docs/DATA_ACCESS.md). Build stacks with `uv run understory build-stack ...`; optionally join forest/terrain masks with `scripts/apply_masks.py`.
 
 Results are re-validated on the calibrated (July 2026+) NISAR stream before being treated as final; pre-calibration archive numbers carry a documented caveat. Sequencing: [docs/ROADMAP.md](../docs/ROADMAP.md).

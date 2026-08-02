@@ -63,8 +63,8 @@ def test_expected_coherence_is_bit_identical_tiled_and_untiled():
 def test_candidates_are_identical_tiled_and_untiled():
     stack = make_stack()
     np.testing.assert_array_equal(
-        anomaly_candidates(stack, UNTILED).values,
-        anomaly_candidates(stack, TILED).values,
+        anomaly_candidates(anomaly_deficit(stack, UNTILED), UNTILED).values,
+        anomaly_candidates(anomaly_deficit(stack, TILED), TILED).values,
     )
 
 
@@ -90,6 +90,6 @@ def test_deficit_preserves_coords_and_dtype():
 def test_planted_disturbance_is_still_found_after_tiling():
     """Exactness is not enough — the signal must actually survive."""
     stack = make_stack()
-    candidates = anomaly_candidates(stack, TILED)
+    candidates = anomaly_candidates(anomaly_deficit(stack, TILED), TILED)
     # The planted drop is at y 20:24, x 10:30 from step 6 onward.
     assert bool(candidates.isel(time=slice(6, None)).values[:, 20:24, 10:30].any())

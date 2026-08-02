@@ -20,5 +20,10 @@ def setup_logging(verbosity: int = 0) -> None:
     if verbosity == 1:
         # INFO for our packages, keep third-party libraries at WARNING.
         logging.getLogger().setLevel(logging.WARNING)
-        for prefix in ("understory_core", "understory_detect", "understory_labels"):
+        for prefix in (
+            "understory_core",
+            "understory_detect",
+            "understory_labels",
+            "understory_perf",
+        ):
             logging.getLogger(prefix).setLevel(logging.INFO)

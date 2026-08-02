@@ -281,7 +281,8 @@ def summarize_coverage(pairs: list[GunwPair], tier: str) -> dict[str, Any]:
     """Return a stable, JSON-ready view of usable archive coverage.
 
     The summary is intentionally independent of terminal formatting so other
-    tools can use archive discovery without scraping ``probe_archive.py``.
+    tools can use archive discovery without scraping ``understory inventory``
+    output.
     """
     usable = dedupe_pairs(single_cycle_pairs(pairs))
     frames: list[dict[str, Any]] = []
