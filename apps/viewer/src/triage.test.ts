@@ -19,7 +19,6 @@ import type { Detection, DisturbanceEvent, MatchingTolerances } from './types'
 
 const TOLERANCES: MatchingTolerances = {
   maxCentroidDistanceM: 500,
-  minSpatialIou: 0,
   temporalWindowDays: 36,
 }
 

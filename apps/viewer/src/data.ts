@@ -190,7 +190,6 @@ function parseTolerances(json: unknown, source: string): MatchingTolerances {
   const obj = asObject(json, source, 'tolerances')
   return {
     maxCentroidDistanceM: num(obj, 'max_centroid_distance_m', source, 'tolerances'),
-    minSpatialIou: num(obj, 'min_spatial_iou', source, 'tolerances'),
     temporalWindowDays: num(obj, 'temporal_window_days', source, 'tolerances'),
   }
 }

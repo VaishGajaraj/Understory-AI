@@ -39,7 +39,6 @@ function toyReport(): Record<string, unknown> {
     methodology_version: '0.1.0',
     tolerances: {
       max_centroid_distance_m: 500.0,
-      min_spatial_iou: 0.0,
       temporal_window_days: 36,
     },
     n_events: 1,
@@ -161,7 +160,6 @@ describe('parseReport', () => {
     expect(report.detectorVersion).toBe('0.1.0')
     expect(report.tolerances).toEqual({
       maxCentroidDistanceM: 500,
-      minSpatialIou: 0,
       temporalWindowDays: 36,
     })
     expect(report.truePositives).toBe(1)

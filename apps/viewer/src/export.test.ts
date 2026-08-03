@@ -6,7 +6,6 @@ import type { BenchmarkReport, Detection, DisturbanceEvent, MatchingTolerances }
 
 const TOLERANCES: MatchingTolerances = {
   maxCentroidDistanceM: 500,
-  minSpatialIou: 0,
   temporalWindowDays: 36,
 }
 

@@ -55,7 +55,7 @@ Known v0 synthetic bounds (`scripts/size_sweep.py`, now swept by width and sub-p
 
 ## Changelog
 
-- **0.1.3** (2026-08): document the scene-wide anomaly guard as detector stage 5; `max_scene_fraction` joins the serialized thresholds in every benchmark config; comparison-baseline plan (optical alert record + Sentinel-1 coherence) recorded in RESEARCH.md.
+- **0.1.3** (2026-08): report schema change — the never-enforced `tolerances.min_spatial_iou` field is removed from reports (spatial IoU is reported via `mean_match_iou`, not gated); document the scene-wide anomaly guard as detector stage 5; `max_scene_fraction` joins the serialized thresholds in every benchmark config; comparison-baseline plan (optical alert record + Sentinel-1 coherence) recorded in RESEARCH.md.
 
 - **0.1.2** (2026-07): explicitly select the 20 m coherence grid; preserve raster CRS through detection and export alert geometry as EPSG:4326; serialize detector thresholds in benchmark configs and reports.
 - **0.1.1** (2026-07): document forest/terrain mask join; reports include mean match IoU and a Markdown twin.

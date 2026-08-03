@@ -80,7 +80,6 @@ export interface Detection {
 /** scoring.MatchingTolerances — the matching rules, recorded in every report. */
 export interface MatchingTolerances {
   maxCentroidDistanceM: number
-  minSpatialIou: number
   temporalWindowDays: number
 }
 
