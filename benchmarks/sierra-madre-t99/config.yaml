@@ -1,0 +1,27 @@
+# The research paper's primary benchmark (docs/RESEARCH.md): physics-
+# normalized coherence change detection over Golden Triangle pine-oak,
+# validated against OPERA DIST-ALERT with Hansen GFC as secondary reference.
+#
+# Labels start empty: ground truth arrives via the DIST-ALERT join
+# (evidence_source: published-record), not hand curation. Until then every
+# kill criterion honestly reads INSUFFICIENT_DATA. The detector field will
+# switch to the physics-normalized v1 statistic once it exists; v0-filters
+# is the raw-coherence baseline the paper compares against.
+name: sierra-madre-t99
+aoi: aoi.yaml
+start: "2026-06-17"
+end: "2026-12-31"
+detector: v0-filters
+detector_config:
+  baseline:
+    window_pairs: 8
+    min_history_pairs: 4
+    anomaly_sigma: 3.0
+  filters:
+    min_persistence_pairs: 2
+    min_cluster_pixels: 12
+    min_linearity: 0.0
+    max_scene_fraction: 0.10
+labels: ../../packages/understory-labels/data/events/sierra-madre-t99.geojson
+stack_store: ../../data/scratch/sierra-madre-t99.zarr
+report_out: reports/sierra-madre-t99.json

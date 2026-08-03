@@ -19,15 +19,17 @@ Honest sequencing for the **open** NISAR forest-degradation benchmark. Dates are
 - [x] Synthetic NISAR-scale capacity/SLO harness and a local report/alert review viewer
 - [x] Production and NISAR opportunity strategy grounded in official product boundaries
 
-## Now (the research ladder — see [RESEARCH.md](RESEARCH.md))
+## Now — THE short-term goal: the JSTARS paper ([RESEARCH.md](RESEARCH.md))
 
-1. **First-light run** (`benchmarks/amazonas-first-light`) — track 89 frame 175, 3 provisional pairs. Needs only Earthdata creds in `~/.netrc`. Produces the undisturbed-forest coherence noise floor: the first publishable result and the AGU abstract.
-2. **AGU Fall 2026 abstract** — deadline **2026-08-05** (requires joining AGU). Fallback: IGARSS 2027.
-3. **Label transcription toward ≥50 events** — fill `amazon-para-imazon.geojson` from published Imazon SAD / IBAMA records while Pará coverage accumulates (stackable ~October at mission cadence; `understory-watch --fail-on-new` is the trigger). Ground-truth volume is the #1 reviewer kill reason.
-4. **Scored benchmark on provisional** — freeze the Pará frame, build, run, report. Exploratory until validated-tier re-run.
-5. **Comparison baselines** — detection lead vs the optical alert record (shipped in the schema) and a Sentinel-1 C-band coherence detector through the same harness (the #2 reviewer kill reason).
-6. **Validated-stream re-validation + beta/provisional/validated difference table** once `NISAR_L2_GUNW_V1` fills (Q4 2026) — the #3 reviewer kill reason, quantified.
-7. **Partner loop** — one NGO / territorial program, free watch area, QGIS alerts, confirm/reject feedback into the label library.
+Primary AOI: `benchmarks/sierra-madre-t99` (Golden Triangle pine-oak, track 99 — live-verified, gate 2 passed). The Amazon is future work; `amazonas-first-light` stays as the engineering shakeout.
+
+1. **Gate 3 (credential-free, this week)** — overlay OPERA DIST-ALERT + Hansen GFC on the sierra-madre AOI, Jun–Aug 2026; confirm real events exist in-window. Kill/repick if quiet.
+2. **First real stack** (needs Earthdata `~/.netrc`) — build track 99 frame 75; gates 4–5 (pine-oak coherence vs the ~0.15–0.2 estimator floor; ionosphere check at 26°N) + per-land-cover coherence statistics (the characterization spine, and an AGU/CCAI abstract on its own).
+3. **Physics-normalized detector (v1)** — predicted-coherence budget (γ_SNR·γ_geom·γ_reg·γ_vol·γ_temporal) from granule metadata; residual z-score vs σ_γ=(1−γ²)/√(2L); registered as a second detector through the same harness. *The methods contribution.*
+4. **DIST-ALERT ground-truth join** — AOI/window events → label records (`published-record`), confusion tables in scoring.
+5. **Sentinel-1 C-band coherence baseline** through the same harness; raw-coherence and intensity baselines from what exists.
+6. **Synthetic injection into real granules** — ROC / minimum-detectable-clearing-size, presented as characterization bounded by the eval-mirror caveat.
+7. **Write + ship**: figures, benchmark packaging, one recognized co-author review, EarthArXiv preprint, JSTARS submission (~week 16 from first stack).
 
 ## Next (after first real report)
 

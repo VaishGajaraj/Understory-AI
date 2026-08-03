@@ -124,6 +124,10 @@ What follows is the concrete stack as best it can be specified before contact wi
 
 **Known technical risks, stated going in.** Pre-calibration artifacts in the current archive (radiometric banding — re-validation on calibrated data is a mandatory gate, not an option); ionospheric noise, to which L-band is more susceptible than shorter wavelengths, partially correctable with standard split-spectrum methods; steep-terrain geometric distortion in some geographies (mask it, don't model it, in v0); and the 12-day revisit as a hard floor on detection latency — the project should never promise faster than the physics allows.
 
+## Publishing this as research (canonical plan: RESEARCH.md)
+
+The benchmark is publishable, not merely postable. The operative, versioned plan — venues (IEEE JSTARS primary), the physics-normalized-statistic thesis, the corrected Sierra Madre AOI, OPERA DIST-ALERT ground truth, de-risk gates, co-author and preprint strategy — lives in [`RESEARCH.md`](RESEARCH.md) and is the project's short-term goal. The CANOPY inheritance described in earlier drafts (detection schema → labels, honest uncertainty → calibrated confidence, kill-criteria-as-tests, the simulator pattern, watch subscriptions) is fully implemented in this repository.
+
 ## 8. How to actually make an impact
 
 This is the section that matters most and gets skipped most. Code detects; only institutions respond. The theory of change has to be engineered with the same seriousness as the pipeline, and it decomposes into four problems.

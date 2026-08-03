@@ -1,0 +1,5 @@
+{
+  "type": "FeatureCollection",
+  "description": "Paper-primary AOI (Sierra Madre Occidental, track 99). Intentionally empty until the OPERA DIST-ALERT ground-truth join lands: disturbance events over the AOI/window become records with evidence_source 'published-record' (DIST-ALERT, DOI 10.5067/SNWG/OPERA_L3_DIST-ALERT-HLS_V1.001), spot-checked per CONTRIBUTING.md. Optical references are references, not field truth — the paper says so explicitly.",
+  "features": []
+}

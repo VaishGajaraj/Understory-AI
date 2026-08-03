@@ -1,86 +1,122 @@
-# Research plan — the publication angle
+# Research plan — THE short-term goal
 
-**Version 0.1.0 (2026-08).** Understory's primary framing is a *methods-plus-benchmark
-paper*: not "we detected logging" but **"a reproducible open benchmark for
-separating anthropogenic disturbance from natural decorrelation in NISAR
-L-band coherence time series, evaluated on forest degradation."** The
-methods framing is the citable primitive; each new domain (mining,
-right-of-way, agriculture) becomes a follow-on application paper reusing the
-same harness. Methods papers accumulate citations; application papers don't.
+**Version 0.2.0 (2026-08-02).** The project's short-term goal is one paper:
 
-## Positioning claim (defend this sentence)
+> **"Understory: Physics-Normalized L-Band Coherence Change Detection for
+> Under-Canopy Forest Disturbance — First Results and an Open Benchmark from
+> NISAR."**
 
-> The first open, reproducible benchmark for coherence-based *sub-canopy
-> degradation* detection on NISAR, with externally documented ground truth
-> and published failure analysis.
+One IEEE JSTARS submission (methods + early-mission characterization), the
+open benchmark as its artifact, an EarthArXiv preprint at submission, and a
+short Climate Change AI workshop paper reusing the benchmark. Everything else
+in the repo serves this until it ships.
 
-The novelty boundary, stated honestly: NASA-affiliated work (Flores-Anderson
-et al., 2026) detects early *deforestation* from C-/L-band dual-pol
-**backscatter**. Understory differs on all three axes that matter to a
-reviewer: coherence (not backscatter), degradation under closed canopy (not
-clearing), and an open benchmark with versioned labels (not a closed
-result). "First open benchmark" is the defensible claim; "first detection"
-is not. A systematic prior-art sweep across SAR/forestry literature is an
-open task before the related-work section is written.
+## Thesis (abstract-level)
 
-## Venue ladder (in order)
+Raw 12-day L-band coherence is a biased disturbance detector: the
+decorrelation budget varies with SNR, geometry, and volume scattering across
+a scene. Understory computes a predicted coherence from granule metadata
+(γ_SNR x γ_geom x γ_reg x γ_vol x γ_temporal) and tests the residual
+(observed − predicted) as a z-score against the estimator's known noise
+floor (σ_γ ≈ (1−γ²)/√(2L)), yielding a scene-portable detection statistic.
+Applied to consecutive NISAR 12-day pairs over the Sierra Madre Occidental,
+validated against OPERA DIST-ALERT and Hansen GFC, against raw-coherence,
+intensity, and Sentinel-1 C-band baselines, with an honest
+minimum-detectable-clearing-size curve.
 
-1. **AGU Fall Meeting 2026** (San Francisco, December) — abstract deadline
-   **2026-08-05**. Work-in-progress abstracts are culturally accepted; the
-   first-light noise-floor result (below) is the abstract. Requires joining
-   AGU (non-member waiver deadline passed 07-22). Forcing function: real
-   results by December.
-2. **IGARSS 2027** — fall 2026 deadline, lower pressure, the IEEE remote
-   sensing flagship. The fallback if AGU is missed.
-3. **Journal paper**: two special issues are actively soliciting exactly
-   this — *Geo-spatial Information Science*, "Advancing Earth Observation
-   with NISAR: Early Results" (comparative coherence performance and error
-   sources — nearly a description of this benchmark), and *Remote Sensing*
-   (MDPI) standing special issue "NISAR Global Observations for Ecosystem
-   Science and Applications". Repo + labels ship as supplementary material.
-4. **Data paper** for the label library itself (*Earth System Science Data*
-   or *Scientific Data*): a citable dataset artifact, often easier to land
-   than the methods paper and cited more. The library's separate versioning
-   and CC-BY license were designed for this.
+## Primary AOI — corrected and live-verified (2026-08-02)
 
-Affiliation: "Independent Researcher" is accepted (MDPI policy is explicit).
-arXiv preprinting needs a category endorsement — ask an author we cite;
-journal submission needs none.
+**Sierra Madre Occidental "Golden Triangle" (Chihuahua/Durango pine-oak,
+documented illegal logging), NISAR track 99 frames 74–76 descending.**
+Live probe: 3 consecutive 12-day pairs per frame (2026-06-21, 07-03, 07-15),
+plus track 48 frames 14–16 ascending (3 pairs each) as an independent
+geometry. No flagged calibration tracks (161/174, 161/175, 169/090, 169/091)
+touch the AOI. ≥7 pairs expected ~October at mission cadence.
 
-## The first publishable result (no ground truth required)
+Correction recorded: earlier notes said "track 99 = NW Mexico" based on a
+Baja California Sur probe — desert, wrong biome. Track 99 also crosses the
+mainland pine-oak; the paper AOI is the mainland crossing
+(`benchmarks/sierra-madre-t99`). **The Amazon is future work, not v1**:
+harder physics (low L-band coherence under humid canopy), thinner coverage,
+weaker ground truth. `amazonas-first-light` remains the engineering
+shakeout; the Pará benchmark waits for its archive and Imazon/IBAMA labels.
 
-The `amazonas-first-light` run yields **the per-pixel coherence distribution
-of intact closed-canopy tropical forest at NISAR's 12-day repeat, on
-calibrated data** — the natural-decorrelation noise floor. Nobody has
-published this number yet. It requires zero labels, ~3 pairs, and it is the
-AGU abstract: *"Temporal coherence stability of undisturbed Amazon forest at
-L-band 12-day repeat: first results from NISAR."* Every detector anyone ever
-builds on NISAR forest data fights this floor; measuring it first is a real
-contribution and cites forward into the benchmark paper.
+## Ground truth (the 2026 answer)
 
-## Reviewer-rejection defenses, mapped to repo work
+- **Primary: OPERA DIST-ALERT** — global, 30 m, HLS-based, dry-forest
+  capable, peer-reviewed (Pickens et al. 2025, *Nat. Commun.* 16:8948,
+  DOI 10.1038/s41467-025-64014-9; product DOI
+  10.5067/SNWG/OPERA_L3_DIST-ALERT-HLS_V1.001), in GFW since Jan 2026.
+  RADD does **not** cover NW Mexico; free Planet/NICFI ended 2025.
+- **Secondary: Hansen GFC v1.13** annual loss (elevated dry-forest error,
+  no degradation — reference, not truth).
+- Both are optical references to be spot-checked, not ground truth in the
+  field sense; the paper says so plainly.
 
-The three standard kill reasons for remote-sensing papers, and what this
-repo does about each — these are roadmap items, not aspirations:
+## De-risk gates (verify before committing months)
 
-| Rejection reason | Defense | Status |
+| # | Gate | Status |
 |---|---|---|
-| Insufficient ground truth | ≥50 externally documented events (Imazon SAD / IBAMA transcription into `understory-labels`), rejected events included | label collections scaffolded; transcription is the critical path |
-| No comparison baseline | (a) detection lead vs the optical alert record — `optical_alert_date` is already first-class in the schema and scored; (b) Sentinel-1 C-band coherence over the same AOI/windows as a second detector through the same harness | (a) shipped; (b) roadmap |
-| Uncalibrated data | Provisional-tier runs now; identical re-run on validated `NISAR_L2_GUNW_V1` (Q4 2026) with a beta/provisional/validated difference table quantifying the artifact effect | tier plumbing shipped; difference table pending validated data |
+| 1 | Extractor agrees with the GUNW coherence layer | **By construction** — the pipeline reads the authoritative GUNW `coherenceMagnitude` directly; only clip/align is ours, covered by bit-identity tests |
+| 2 | ≥5–7 usable pairs on a non-flagged track over the AOI | **PASSED 2026-08-02** — 3 pairs today on two independent tracks, ≥7 ~October |
+| 3 | DIST-ALERT shows real disturbance in the AOI during the window | **NEXT ACTION** — overlay DIST-ALERT + Hansen on the AOI; kill/repick if quiet |
+| 4 | Pine-oak coherence sits well above the ~0.15–0.2 estimator floor (L=25) | Needs first stack — blocked on Earthdata creds |
+| 5 | Ionosphere does not dominate the residual at 26°N | Favorable (low latitude, solar-max caveat); check on first stack |
 
-## Claims discipline (already enforced in code)
+## What the codebase already has vs what the paper needs
 
-Synthetic results are scaffolding, never claims — kill-criteria verdicts on
-synthetic benchmarks are auto-marked as such in every report. Published
-tables are machine-generated from report JSON. Matching tolerances are
-recorded inside every report. The methodology document is versioned so
-reviewers can pin the frozen method. This is precisely the reproducibility
-posture reviewers reward.
+Have (paper-ready): authoritative-layer extraction with integrity guards;
+resumable frozen-stack builds; tiled memory-bounded baseline; scene guard;
+kill-criteria + calibration in every machine-generated report; synthetic
+scene generator with width/fill sweeps; WorldCover/DEM/ERA5 joins; the
+reproducibility posture (versioned methodology, frozen configs, CI).
 
-## Sequencing
+Build next, in order:
+1. **Physics-normalized detector (v1)** — predicted-coherence budget from
+   granule metadata + residual z-score with σ_γ noise floor; registered as
+   a second detector through the same harness. *The methods contribution.*
+2. **DIST-ALERT ground-truth join** — DIST-ALERT events over an AOI/window
+   → label-schema records (`evidence_source: published-record`), plus the
+   confusion tables in scoring.
+3. **Sentinel-1 C-band coherence baseline** — same AOI/windows through the
+   same harness (the #2 reviewer kill reason).
+4. **Synthetic injection into real granules** — implant known coherence
+   drops into real stacks for ROC/min-size curves; present as
+   characterization bounded by the eval-mirror caveat (Section 7 of the
+   paper), with DIST-ALERT validation as the independent robustness claim.
+5. **Per-land-cover coherence statistics** in the report (the
+   early-mission characterization spine; also gate #4).
 
-First-light run (needs only Earthdata creds) → AGU abstract (08-05) → label
-transcription toward 50+ events while Pará coverage accumulates (~October)
-→ scored benchmark on provisional → Sentinel-1 comparison harness →
-validated-tier re-run → journal + data paper submissions.
+## Venues and mechanics
+
+- **Primary: IEEE JSTARS** (gold OA, APC $1,800, preprints fine,
+  application-tolerant, single/unaffiliated-author feasible).
+- **Backup: Science of Remote Sensing** (Elsevier OA). **Stretch: RSE**
+  (non-OA route avoids APC). MDPI only if speed becomes everything.
+- **Parallel: Climate Change AI workshop** (NeurIPS/ICLR, 4-page,
+  non-archival) for the benchmark; NeurIPS D&B track is the ML-venue home
+  if pursued (public code + dataset + Croissant metadata).
+- **EarthArXiv preprint at submission** (priority defense). Get an ORCID.
+- **Recruit one recognized co-author** (JPL/ASF ecosystems or a university
+  SAR lab) once preliminary coherence statistics exist — raises acceptance
+  odds, converts scoop risk into collaboration. Keep first-authorship.
+- Scoop watch: JPL NISAR ecosystems team. If a NISAR forest-coherence paper
+  drops, pivot emphasis to the physics-normalized statistic + benchmark
+  (idea, not dataset — harder to scoop) and accelerate the preprint.
+- Provisional-data caveat: state the CRID, present as early-mission; the
+  end-2026 reprocessing campaign supersedes — the validated re-run is the
+  revision-stage upgrade.
+
+## Timeline from "first stack built" (~16 weeks)
+
+Weeks 0–2 extractor/stack sanity on real pairs · 2–5 per-land-cover
+coherence stats + DIST-ALERT overlay (gates 3–4) · 5–9 physics-normalized
+statistic + baselines · 9–12 injection ROC/min-size + false-alarm
+arithmetic at swath scale · 12–16 writing, figures, benchmark packaging,
+co-author review · week 16 preprint + JSTARS submission. First decision
+~4–6 months.
+
+## Standing prerequisites
+
+Earthdata credentials in `~/.netrc` (blocks gates 4–5 and everything after);
+a systematic prior-art sweep for the related-work section; ORCID.

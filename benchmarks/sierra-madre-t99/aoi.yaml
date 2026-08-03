@@ -1,0 +1,20 @@
+name: sierra-madre-t99
+description: >
+  Sierra Madre Occidental "Golden Triangle" pine-oak (Chihuahua/Durango) —
+  the research paper's primary AOI. Documented illegal-logging region; dry
+  open-canopy forest gives high, stable L-band coherence (a cleaner
+  decorrelation budget than humid tropics). Live-verified 2026-08-02: NISAR
+  track 99 frames 74-76 descending, 3 consecutive 12-day provisional pairs
+  (2026-06-21, 07-03, 07-15), plus track 48 frames 14-16 ascending as an
+  independent geometry; no flagged calibration tracks. Ground truth: OPERA
+  DIST-ALERT (primary) + Hansen GFC v1.13 (secondary). See docs/RESEARCH.md.
+biome: madrean-pine-oak
+# Exterior ring is counterclockwise per GeoJSON (RFC 7946).
+geometry:
+  type: Polygon
+  coordinates:
+    - - [-107.6, 25.8]
+      - [-106.2, 25.8]
+      - [-106.2, 27.2]
+      - [-107.6, 27.2]
+      - [-107.6, 25.8]

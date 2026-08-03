@@ -12,7 +12,7 @@ This project is scoped as a question, not a platform:
 
 Nobody knows the answer on real NISAR data yet. We intend to publish it, favorable or not.
 
-**Understory is research first**: a reproducible methods-plus-benchmark contribution — the framework for separating anthropogenic disturbance from natural decorrelation in L-band coherence time series, an openly versioned ground-truth library, and machine-generated results a reviewer can re-run. The publication plan (venues, positioning, reviewer defenses) lives in [docs/RESEARCH.md](docs/RESEARCH.md). If you use the benchmark, harness, or labels, cite via [CITATION.cff](CITATION.cff).
+**Understory is research first** — the short-term goal is one paper (physics-normalized L-band coherence change detection + this open benchmark, targeted at IEEE JSTARS; plan and de-risk gates in [docs/RESEARCH.md](docs/RESEARCH.md)). More broadly: a reproducible methods-plus-benchmark contribution — the framework for separating anthropogenic disturbance from natural decorrelation in L-band coherence time series, an openly versioned ground-truth library, and machine-generated results a reviewer can re-run. If you use the benchmark, harness, or labels, cite via [CITATION.cff](CITATION.cff).
 
 ## Repository layout
 
@@ -24,7 +24,7 @@ This is a monorepo. Python packages carry the science and pipeline (the MVP); Ty
 | [`packages/understory-detect`](packages/understory-detect) | Python | The science: seasonal coherence baselines, anomaly detection, persistence/geometry filters, and the scoring harness. Detectors are pluggable. |
 | [`packages/understory-labels`](packages/understory-labels) | Data + Python | The labeled disturbance-event library: versioned schema, contribution path, validation tooling. CC-BY 4.0. |
 | [`packages/understory-perf`](packages/understory-perf) | Python | Load and latency harness: how many AOIs the pipeline can carry before it falls behind NISAR's 12-day cycle, and where it breaks. |
-| [`benchmarks/`](benchmarks) | Config | Benchmark configurations per geography (Amazon/Pará first). Each runs end-to-end from a single command. |
+| [`benchmarks/`](benchmarks) | Config | Benchmark configurations per geography — `sierra-madre-t99` is the paper's primary AOI; Amazon configs are staged for future work. Each runs end-to-end from a single command. |
 | [`apps/viewer`](apps/viewer) | TypeScript | Web viewer for alerts and benchmark reports — triage queue, map, and the kill-criteria table, rendered from real pipeline output. |
 | [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) | — | The versioned methodology document. For a benchmark project, the method is the citable artifact. |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | — | Honest next steps toward a published real-data benchmark. |
